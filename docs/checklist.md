@@ -7,7 +7,7 @@
 - [x] Create Supabase project (`mailmaan`, bgbtxtbjgybhzufoyvjn) + initial migrations
 - [x] Configure local dev; minimal health route (`GET /v1/health`)
 - [x] Architecture decision record + this checklist
-- [ ] Deploy the starter app to Vercel (blocked: run `vercel login` first)
+- [x] Deploy the starter app to Vercel — https://mailmaan-regen.vercel.app
 
 **End-of-day proof:** clean build + deployed starter app with `/v1/health`.
 

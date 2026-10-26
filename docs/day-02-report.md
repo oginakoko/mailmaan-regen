@@ -67,7 +67,9 @@
   key authenticates only to its own project (see live proof above).
 
 ## Remaining risks and blockers
-- Vercel deployment still blocked on `vercel login` (Day 1 carry-over).
+- ~~Vercel deployment still blocked on `vercel login`~~ **Resolved 2026-10-26:**
+  deployed to https://mailmaan-regen.vercel.app; `/v1/health` 200,
+  `/v1/project` unauthenticated 401 — both verified over the public internet.
 - Probe Auth users/projects remain in the Supabase project (audit trail, not
   production data). Delete them from the Supabase dashboard if unwanted.
 - Dashboard pages stream under `<Suspense>` (Next 16 cache components);
