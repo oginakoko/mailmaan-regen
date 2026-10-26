@@ -22,6 +22,11 @@ const serverEnvSchema = publicEnvSchema.extend({
   AI_BASE_URL: z.url().optional(),
   AI_TEMPLATE_MODEL: z.string().min(1).optional(),
   AI_MODELS_PATH: z.string().startsWith("/").optional(),
+  // Delivery via the deployed Mailmaan service (Day 4, ADR-0002).
+  MAILMAAN_DELIVERY_BASE_URL: z.url().optional(),
+  MAILMAAN_DELIVERY_API_KEY: z.string().min(1).optional(),
+  // 32 bytes hex-encoded (64 chars); encrypts per-project SMTP passwords.
+  MAILMAAN_SMTP_ENCRYPTION_KEY: z.string().min(1).optional(),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
