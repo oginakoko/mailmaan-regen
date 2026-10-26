@@ -13,10 +13,13 @@ integration with a live service — **no code is copied, vendored, or imported**
 from any previous Mailmaan repository. No other sender (Resend, SMTP-direct,
 etc.) will be introduced.
 
-Templates are rendered by Mailmaan (the old service is the rendering truth).
-The new app never renders email HTML for sending; it renders only for
-preview. If the old service lacks a capability the new product needs, the old
-service is what gets extended (its own GitHub → `main` → Vercel auto-deploy).
+Templates are authored and versioned in this app and rendered locally at
+send time (sanitized, schema-validated). The old service is the delivery
+truth: it transmits the rendered bytes through the caller's per-request
+SMTP mailbox via its raw-HTML mode, exactly like Gaphytoro's template
+sends. If the old service lacks a capability the new product needs, the
+old service is what gets extended (its own GitHub → `main` → Vercel
+auto-deploy).
 
 ## Verified live evidence (2026-10-26, read-only probes)
 

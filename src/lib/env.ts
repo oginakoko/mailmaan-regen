@@ -27,6 +27,9 @@ const serverEnvSchema = publicEnvSchema.extend({
   MAILMAAN_DELIVERY_API_KEY: z.string().min(1).optional(),
   // 32 bytes hex-encoded (64 chars); encrypts per-project SMTP passwords.
   MAILMAAN_SMTP_ENCRYPTION_KEY: z.string().min(1).optional(),
+  // Demo guardrail (Blueprint §7): when set, sends are restricted to these
+  // comma-separated recipients. Empty/unset means no restriction.
+  MAILMAAN_TEST_RECIPIENTS: z.string().optional(),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
