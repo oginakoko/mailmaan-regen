@@ -12,10 +12,10 @@
 **End-of-day proof:** clean build + deployed starter app with `/v1/health`.
 
 ## Day 2 — Auth, project boundary and API credentials
-- [ ] Supabase SSR authentication
-- [ ] Project onboarding + brand profile storage
-- [ ] Secure one-time API key creation, hashing, scopes, revocation
-- [ ] RLS policies + database tests (cross-project isolation proof)
+- [x] Supabase SSR authentication
+- [x] Project onboarding + brand profile storage
+- [x] Secure one-time API key creation, hashing, scopes, revocation
+- [x] RLS policies + database tests (cross-project isolation proof, 5/5 live)
 
 ## Day 3 — Template engine and AI generation
 - [ ] Template draft/publish/version + safe server-side rendering
