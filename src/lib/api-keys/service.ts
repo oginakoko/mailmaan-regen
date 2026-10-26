@@ -125,8 +125,16 @@ export async function authenticateApiKey(rawKey: string | null): Promise<Authent
   };
 }
 
-/** Scope guard. Blueprints scopes: read < send/events (send implies read). */
+/**
+ * Scope guard (convenience wrapper). Blueprints scopes: read < send/events
+ * (send implies read). Throws ApiKeyAuthError when the scope is missing.
+ */
 export function requireScope(auth: AuthenticatedApiKey, scope: ApiKeyScope): void {
+  assertScope(auth, scope);
+}
+
+/** Scope guard. Throws ApiKeyAuthError when the key lacks the scope. */
+export function assertScope(auth: AuthenticatedApiKey, scope: ApiKeyScope): void {
   const scopes = new Set(auth.key.scopes);
   if (scopes.has(scope)) return;
   if (scope === "read" && (scopes.has("send") || scopes.has("events"))) return;

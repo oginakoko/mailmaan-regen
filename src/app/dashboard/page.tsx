@@ -98,12 +98,20 @@ async function DashboardContent() {
                     {project.slug} · {project.status}
                   </p>
                 </div>
-                <a
-                  className="text-sm font-medium text-zinc-900 underline underline-offset-4 dark:text-zinc-100"
-                  href={`/dashboard/projects/${project.id}/keys`}
-                >
-                  API keys
-                </a>
+                <div className="flex shrink-0 items-center gap-4">
+                  <a
+                    className="text-sm font-medium text-zinc-900 underline underline-offset-4 dark:text-zinc-100"
+                    href={`/dashboard/projects/${project.id}/templates`}
+                  >
+                    Templates
+                  </a>
+                  <a
+                    className="text-sm font-medium text-zinc-900 underline underline-offset-4 dark:text-zinc-100"
+                    href={`/dashboard/projects/${project.id}/keys`}
+                  >
+                    API keys
+                  </a>
+                </div>
               </li>
             ))}
           </ul>

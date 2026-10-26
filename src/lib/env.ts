@@ -15,6 +15,13 @@ const publicEnvSchema = z.object({
 
 const serverEnvSchema = publicEnvSchema.extend({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  // AI template generation (Day 3, Blueprint §10). Meta Muse via the Meta
+  // Model API (OpenAI-compatible). All optional: without a key + model the
+  // app must use deterministic templates labelled as fallback/demo.
+  AI_API_KEY: z.string().min(1).optional(),
+  AI_BASE_URL: z.url().optional(),
+  AI_TEMPLATE_MODEL: z.string().min(1).optional(),
+  AI_MODELS_PATH: z.string().startsWith("/").optional(),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;

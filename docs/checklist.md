@@ -18,9 +18,12 @@
 - [x] RLS policies + database tests (cross-project isolation proof, 5/5 live)
 
 ## Day 3 — Template engine and AI generation
-- [ ] Template draft/publish/version + safe server-side rendering
-- [ ] Brand form + AI template-generation endpoint (clearly labelled fallbacks)
-- [ ] Soko `welcome` and `receipt` templates with previews
+- [x] Template draft/publish/version + safe server-side rendering
+- [x] Brand form + AI template-generation endpoint (clearly labelled fallbacks)
+- [x] Soko `welcome` and `receipt` templates with previews
+  (Note: real Muse generation unverified until `AI_API_KEY` +
+  `AI_TEMPLATE_MODEL` are provided; fallback is labelled demo until then.
+  See `docs/day-03-report.md`.)
 
 ## Day 4 — Real email send path
 - [ ] `EmailProvider` interface + Resend adapter
