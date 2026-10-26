@@ -74,3 +74,34 @@ Therefore, before any production send:
 3. Mailmaan `EmailProvider` + `POST /v1/emails` + idempotency + status map.
 4. One real send to `philipstar98@gmail.com` (user-designated test inbox);
    report the actual API result. No delivery claim beyond what it returns.
+
+## Deployment record — per-request SMTP + raw HTML (2026-10-26)
+
+- Old-service PR `oginakoko/mailmaan#112` (`feat/v1-send-smtp-html-override`)
+  merged to `main` (merge commit `d749bfd`, feature commit `5d10b87`).
+  Vercel production deploy succeeded; no DB migration needed.
+- Live verification after deploy (validation probes only, nothing dispatched):
+  - `GET /v1/health` → 200 (verified by old-service agent).
+  - Authenticated `POST /v1/send` with `smtp: {"host": ""}` →
+    422 `` `smtp.host` is required `` — new code confirmed live.
+  - Authenticated `POST /v1/send` with `html` and no subject →
+    400 `` `subject` is required when sending raw `html` ``.
+  - A live send through the new fields has NOT been verified yet; the
+    first real send happens in step 4 above via this app.
+
+## Residual risks (recorded explicitly per review)
+
+- **Arbitrary SMTP endpoints.** A valid API key lets the holder point
+  `smtp.host`/`smtp.port` at any reachable server, not just their own
+  provider. Accepted as inherent to user-supplied SMTP; the trust anchor
+  is the API key. Mitigations to consider in the old service: per-key
+  rate limits on `/v1/send`, and audit logging of host/port (never
+  credentials) per send.
+- **`smtp.secure` coercion.** The merged code uses `Boolean(...)`, so a
+  JSON string `"false"` would become `true`. This app always sends a real
+  boolean; a strict-validation fix has been requested from the
+  old-service agent (follow-up instruction, not blocking).
+- **Old-repo suite health.** The old repo's full Vitest suite reports
+  27 failures; they were not baselined against pre-merge `main`.
+  Focused transactional tests (6/6) and typecheck pass. Baselining
+  requested from the old-service agent.
