@@ -25,20 +25,21 @@
   `AI_TEMPLATE_MODEL` are provided; fallback is labelled demo until then.
   See `docs/day-03-report.md`.)
 
-## Day 4 — Real email send path
-- [ ] `EmailProvider` interface + Resend adapter
-- [ ] `POST /v1/emails` with idempotency + durable queued state
-- [ ] Inngest send function; real test email proof
+## Day 4 — Real email send path (ADR-0002: delivery via the Mailmaan service)
+- [ ] Per-project SMTP config storage (encrypted at rest) + settings UI (masked)
+- [ ] `EmailProvider` interface + Mailmaan service adapter (`POST /v1/send`, Bearer `MAILMAAN_DELIVERY_*`; no other sender, ever)
+- [ ] `POST /v1/emails` with idempotency + durable queued state; sends blocked when SMTP unconfigured
+- [ ] Real test email proof to the designated test inbox; truthful status mapping (never claim `delivered` without evidence)
 
 ## Day 5 — Webhooks and message observability
-- [ ] Signed webhook verification, dedupe, canonical state mapping
+- [ ] Message status read-back (only if the Mailmaan service exposes it; otherwise `accepted` is the last claimable state)
 - [ ] `GET /v1/messages/:id` + activity/timeline UI
 - [ ] Controlled failure test shown truthfully
 
 ## Day 6 — Event ingestion and workflows
 - [ ] `POST /v1/events` with idempotency + dispatch state
-- [ ] Workflow CRUD + Inngest matching + pending-event reconciler
-- [ ] `user.signed_up` → welcome, `order.paid` → receipt
+- [ ] Workflow CRUD + matching (user.signed_up → welcome, order.paid → receipt)
+- [ ] Pending-event reconciler
 
 ## Day 7 — SDK and MCP
 - [ ] TypeScript SDK over the public API
