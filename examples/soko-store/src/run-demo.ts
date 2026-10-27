@@ -19,6 +19,7 @@ console.log("signup:", signup.id, signup.dispatch_status, signup.runs.map((r) =>
 const order = await store.checkout({
   orderId: `DEMO-${stamp}`,
   customerEmail: email,
+  customerFirstName: "Demo",
   total: "19.99",
   currency: "USD",
 });

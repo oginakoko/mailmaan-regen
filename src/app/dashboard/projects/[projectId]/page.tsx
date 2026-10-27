@@ -174,6 +174,18 @@ async function OverviewContent({ params }: { params: Promise<{ projectId: string
        "variables":{"name":"Ada"}}'`}
         </pre>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          New here? Read the{" "}
+          <a
+            href="https://github.com/oginakoko/mailmaan-regen/blob/main/docs/developer-guide.md"
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-4"
+          >
+            developer guide
+          </a>{" "}
+          (5-minute setup, event design rules, agent path).
+        </p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Prefer events? Post <code>{"{name, data}"}</code> to{" "}
           <code>/v1/events</code> and let a workflow decide what to send —{" "}
           <a

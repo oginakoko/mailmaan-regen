@@ -29,10 +29,15 @@ export class SokoStore {
     });
   }
 
-  /** Paid order → `order.paid` → receipt workflow. */
+  /**
+   * Paid order → `order.paid` → receipt workflow. Event data must carry
+   * every template variable (validation is strict: missing or unknown
+   * variables fail the send).
+   */
   async checkout(input: {
     orderId: string;
     customerEmail: string;
+    customerFirstName: string;
     total: string;
     currency: string;
   }): Promise<TrackedEvent> {
@@ -41,6 +46,7 @@ export class SokoStore {
       name: "order.paid",
       data: {
         customerEmail: input.customerEmail,
+        firstName: input.customerFirstName,
         orderId: input.orderId,
         total: input.total,
         currency: input.currency,
@@ -53,7 +59,7 @@ export class SokoStore {
     return this.mailmaan.sendEmail({
       to: input.email,
       template: "welcome",
-      variables: { firstName: input.firstName, product: "Soko" },
+      variables: { firstName: input.firstName },
       metadata: { source: "soko-store-direct" },
       idempotencyKey: input.idempotencyKey,
     });
@@ -68,7 +74,7 @@ export class SokoStore {
     return this.mailmaan.sendEmail({
       to: input.friendEmail,
       template: "welcome",
-      variables: { firstName: input.friendName, product: "Soko" },
+      variables: { firstName: input.friendName },
       metadata: { source: "soko-invite", invite_token: input.inviteToken },
       idempotencyKey: `soko-invite/${input.inviteToken}`,
     });

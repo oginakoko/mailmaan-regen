@@ -20,13 +20,20 @@ describe("SokoStore", () => {
     await store.checkout({
       orderId: "ORD-1",
       customerEmail: "a@example.com",
+      customerFirstName: "Asha",
       total: "49.99",
       currency: "USD",
     });
     expect(trackEvent).toHaveBeenCalledWith({
       id: "soko-order/ORD-1",
       name: "order.paid",
-      data: { customerEmail: "a@example.com", orderId: "ORD-1", total: "49.99", currency: "USD" },
+      data: {
+        customerEmail: "a@example.com",
+        firstName: "Asha",
+        orderId: "ORD-1",
+        total: "49.99",
+        currency: "USD",
+      },
     });
   });
 
@@ -37,7 +44,7 @@ describe("SokoStore", () => {
     expect(sendEmail).toHaveBeenCalledWith({
       to: "a@example.com",
       template: "welcome",
-      variables: { firstName: "Asha", product: "Soko" },
+      variables: { firstName: "Asha" },
       metadata: { source: "soko-store-direct" },
       idempotencyKey: "k1",
     });
@@ -50,7 +57,7 @@ describe("SokoStore", () => {
     expect(sendEmail).toHaveBeenCalledWith({
       to: "a@example.com",
       template: "welcome",
-      variables: { firstName: "Jo", product: "Soko" },
+      variables: { firstName: "Jo" },
       metadata: { source: "soko-invite", invite_token: "tok1" },
       idempotencyKey: "soko-invite/tok1",
     });

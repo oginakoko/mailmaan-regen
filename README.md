@@ -7,6 +7,10 @@ API key, TypeScript SDK, or MCP tools for coding agents.
 Production: `https://mailmaan-regen.vercel.app` · Blueprint (canonical spec):
 `MAILMAAN_HACKATHON_MASTER_BLUEPRINT.md` (Documents folder, outside this repo).
 
+Integrating an app? Start with [`docs/developer-guide.md`](docs/developer-guide.md)
+(5-minute setup, event design rules, agent/MCP path) and the runnable
+[`examples/soko-store`](examples/soko-store) reference.
+
 ## Architecture
 
 - **Next.js + TypeScript app** (`src/`): public API (`/v1/*`), authenticated
