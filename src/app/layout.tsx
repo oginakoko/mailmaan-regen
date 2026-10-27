@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Geist, Geist_Mono, Work_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -26,6 +26,14 @@ const workSans = Work_Sans({
 export const metadata: Metadata = {
   title: "Mailmaan — email runtime for AI-built apps",
   description: "Brand-matched templates, deterministic event workflows and truthful delivery timelines.",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#faf7f0",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

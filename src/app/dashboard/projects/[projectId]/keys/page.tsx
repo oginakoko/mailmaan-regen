@@ -1,24 +1,22 @@
 import { Suspense } from "react";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { createApiKey, listApiKeys, revokeApiKey, API_KEY_SCOPES } from "@/lib/api-keys/service";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireOwnedProject } from "@/lib/dashboard/projects";
+import { Banner } from "@/components/ui/banner";
+import { SubmitButton } from "@/components/ui/button";
+import { ConfirmForm } from "@/components/ui/confirm";
+import { CopyButton } from "@/components/ui/copy";
+import { Dialog } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty";
+import { CheckboxField, TextField } from "@/components/ui/field";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
-async function requireOwnedProject(projectId: string) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  // Owner-scoped RLS does the isolation work here (Day 2 policies).
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, slug")
-    .eq("id", projectId)
-    .maybeSingle();
-  if (!project) notFound();
-  return project;
-}
+const SCOPE_HELP: Record<string, string> = {
+  read: "Read project, templates and messages.",
+  send: "Send email (implies read).",
+  events: "Ingest app events (implies read).",
+  templates: "Generate AI template drafts (implies read).",
+};
 
 async function createKeyAction(formData: FormData) {
   "use server";
@@ -40,7 +38,37 @@ async function revokeKeyAction(formData: FormData) {
   const keyId = String(formData.get("keyId") ?? "");
   await requireOwnedProject(projectId);
   await revokeApiKey({ projectId, keyId });
-  redirect(`/dashboard/projects/${projectId}/keys`);
+  redirect(`/dashboard/projects/${projectId}/keys?revoked=1`);
+}
+
+function NewKeyDialog({ projectId }: { projectId: string }) {
+  return (
+    <Dialog
+      trigger="+ New key"
+      title="New API key"
+      description="Keys are shown once and stored only as hashes. Give each caller the smallest scopes it needs."
+    >
+      <form action={createKeyAction} className="space-y-4">
+        <input type="hidden" name="projectId" value={projectId} />
+        <TextField label="Name (optional)" name="name" placeholder="production-server" autoComplete="off" />
+        <fieldset className="space-y-2.5">
+          <legend className="text-sm font-semibold">Scopes</legend>
+          {API_KEY_SCOPES.map((scope) => (
+            <CheckboxField
+              key={scope}
+              name={`scope_${scope}`}
+              defaultChecked={scope === "read"}
+              label={<code className="font-mono text-[0.9em]">{scope}</code>}
+              hint={SCOPE_HELP[scope] ?? ""}
+            />
+          ))}
+        </fieldset>
+        <SubmitButton pendingLabel="Creating key…" className="w-full sm:w-auto">
+          Create key
+        </SubmitButton>
+      </form>
+    </Dialog>
+  );
 }
 
 async function ProjectKeysContent({
@@ -48,106 +76,86 @@ async function ProjectKeysContent({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ created?: string; error?: string }>;
+  searchParams: Promise<{ created?: string; error?: string; revoked?: string }>;
 }) {
   const { projectId } = await params;
   const query = await searchParams;
-  const project = await requireOwnedProject(projectId);
+  await requireOwnedProject(projectId);
   const keys = await listApiKeys(projectId);
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-12">
-      <header className="space-y-1">
-        <p className="text-sm text-zinc-500">
-          <a href="/dashboard" className="underline underline-offset-4">
-            ← All projects
-          </a>{" "}
-          ·{" "}
-          <a href={`/dashboard/projects/${projectId}`} className="underline underline-offset-4">
-            Project overview
-          </a>
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          API keys — {project.name}
-        </h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Keys are shown once at creation and stored only as hashes. The raw
-          key can never be recovered — revoke and recreate if you lose it.
-        </p>
-      </header>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="font-display text-2xl font-medium tracking-tight">API keys</h2>
+          <p className="mt-1 max-w-xl text-sm leading-6 text-[#1c1917]/65">
+            A lost key can never be recovered — revoke it and create a new one.
+          </p>
+        </div>
+        <NewKeyDialog projectId={projectId} />
+      </div>
 
-      {query.error ? (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{query.error}</p>
-      ) : null}
+      {query.error ? <Banner tone="error">{query.error}</Banner> : null}
+      {query.revoked ? <Banner tone="success" title="Key revoked.">Calls using it now fail closed.</Banner> : null}
 
       {query.created ? (
-        <div className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 dark:border-amber-800 dark:bg-amber-950">
-          <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-            Copy your new API key now — it will not be shown again.
-          </p>
-          <code className="block break-all rounded-lg bg-white px-3 py-2 font-mono text-sm dark:bg-zinc-900">{query.created}</code>
-        </div>
+        <Banner tone="warn" title="Copy your new API key now — it will not be shown again.">
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <code className="block flex-1 break-all rounded-lg bg-white px-3 py-2 font-mono text-sm">
+              {query.created}
+            </code>
+            <CopyButton text={query.created} />
+          </div>
+        </Banner>
       ) : null}
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">Existing keys</h2>
-        {keys.length > 0 ? (
-          <ul className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
-            {keys.map((key) => (
-              <li key={key.id} className="flex items-center justify-between gap-4 px-4 py-3">
-                <div>
-                  <p className="font-medium text-zinc-900 dark:text-zinc-50">{key.name ?? "Untitled key"}</p>
-                  <p className="font-mono text-xs text-zinc-500">
-                    {key.prefix}… · scopes: {key.scopes.join(", ") || "none"}
-                    {key.revoked_at ? " · revoked" : ""}
-                    {key.last_used_at ? ` · last used ${new Date(key.last_used_at).toLocaleString()}` : " · never used"}
-                  </p>
-                </div>
-                {!key.revoked_at ? (
-                  <form action={revokeKeyAction}>
+      {keys.length > 0 ? (
+        <ul className="divide-y divide-[#1c1917]/10 rounded-2xl border border-[#1c1917]/10 bg-white shadow-sm">
+          {keys.map((key) => (
+            <li key={key.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-center gap-2 font-semibold">
+                  {key.name ?? "Untitled key"}
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      key.revoked_at
+                        ? "bg-[#1c1917]/8 text-[#1c1917]/55"
+                        : "bg-[#1a7f37]/10 text-[#145f2a]"
+                    }`}
+                  >
+                    {key.revoked_at ? "Revoked" : "Active"}
+                  </span>
+                </p>
+                <p className="mt-1 font-mono text-xs text-[#1c1917]/55">
+                  {key.prefix}… · scopes: {key.scopes.join(", ") || "none"}
+                </p>
+                <p className="mt-0.5 text-xs text-[#1c1917]/55">
+                  {key.last_used_at ? `Last used ${new Date(key.last_used_at).toLocaleString()}` : "Never used"}
+                </p>
+              </div>
+              {!key.revoked_at ? (
+                <div className="shrink-0">
+                  <ConfirmForm
+                    action={revokeKeyAction}
+                    label="Revoke"
+                    confirmLabel="Click again to revoke"
+                  >
                     <input type="hidden" name="projectId" value={projectId} />
                     <input type="hidden" name="keyId" value={key.id} />
-                    <button type="submit" className="rounded-full border border-red-300 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950">
-                      Revoke
-                    </button>
-                  </form>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="rounded-xl border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
-            No API keys yet. Create one below to call the Mailmaan API.
-          </p>
-        )}
-      </section>
-
-      <section className="space-y-4 rounded-xl border border-zinc-200 p-5 dark:border-zinc-800">
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">Create a key</h2>
-        <form action={createKeyAction} className="space-y-3">
-          <input type="hidden" name="projectId" value={projectId} />
-          <label className="block space-y-1 text-sm">
-            <span className="font-medium">Name (optional)</span>
-            <input name="name" placeholder="production-server" className="w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900" />
-          </label>
-          <fieldset className="space-y-2 text-sm">
-            <legend className="font-medium">Scopes</legend>
-            {API_KEY_SCOPES.map((scope) => (
-              <label key={scope} className="flex items-center gap-2">
-                <input type="checkbox" name={`scope_${scope}`} defaultChecked={scope === "read"} className="h-4 w-4" />
-                <span>
-                  <code className="font-mono">{scope}</code>
-                  {scope === "read" ? " — read project/templates/messages" : scope === "send" ? " — send email (implies read)" : " — ingest app events (implies read)"}
-                </span>
-              </label>
-            ))}
-          </fieldset>
-          <button type="submit" className="rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300">
-            Create key
-          </button>
-        </form>
-      </section>
-    </main>
+                  </ConfirmForm>
+                </div>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <EmptyState
+          title="No API keys yet"
+          body="Create one to call the Mailmaan API from your app or coding agent."
+          action={<NewKeyDialog projectId={projectId} />}
+        />
+      )}
+    </div>
   );
 }
 
@@ -156,16 +164,10 @@ export default function ProjectKeysPage({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ created?: string; error?: string }>;
+  searchParams: Promise<{ created?: string; error?: string; revoked?: string }>;
 }) {
   return (
-    <Suspense
-      fallback={
-        <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-12">
-          <p className="text-sm text-zinc-500">Loading API keys…</p>
-        </main>
-      }
-    >
+    <Suspense fallback={<PageSkeleton titleWidth="w-40" cards={0} />}>
       <ProjectKeysContent params={params} searchParams={searchParams} />
     </Suspense>
   );
