@@ -1,5 +1,6 @@
 // Machine proof: drives the BUILT MCP server over stdio with a real MCP
-// client and calls all six tools against the live API. Manual script —
+// client and calls six of the seven tools against the live API
+// (generate_template is covered by the SDK tests). Manual script —
 // NOT part of the vitest suite (send/track dispatch real emails).
 // Requires MAILMAAN_API_KEY (read+send+events) and MAILMAAN_API_URL.
 import { fileURLToPath } from "node:url";

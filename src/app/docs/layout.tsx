@@ -24,6 +24,9 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
             <a href="/dashboard" className="text-[#1c1917]/60 hover:text-[#1c1917]">
               Dashboard
             </a>
+            <Link href="/about" className="text-[#1c1917]/60 hover:text-[#1c1917]">
+              About
+            </Link>
           </nav>
         </header>
         <div className="mt-8 grid gap-10 lg:grid-cols-[240px_1fr]">
