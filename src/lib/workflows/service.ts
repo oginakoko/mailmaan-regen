@@ -531,17 +531,43 @@ export async function ingestEvent(
 }
 
 /**
- * Reconciler: replays events stuck `pending` (interrupted ingest) and
- * executes delayed runs past their due time. Safe to run repeatedly.
+ * Reconciler: replays events stuck `pending` (interrupted ingest),
+ * resets runs stuck `running` past the crash window, and executes
+ * delayed runs past their due time. Safe to run repeatedly.
  */
+export const STUCK_RUN_MINUTES = 15;
+
 export async function reconcileProject(
   projectId: string,
   deps?: { provider?: DeliveryProvider; now?: Date },
-): Promise<{ events_reconciled: number; runs_executed: number }> {
+): Promise<{ events_reconciled: number; runs_executed: number; runs_reset: number }> {
   const db = createSupabaseServiceClient();
   const now = deps?.now ?? new Date();
   let eventsReconciled = 0;
   let runsExecuted = 0;
+  let runsReset = 0;
+
+  // Crash recovery: a run claimed but never finished (process died between
+  // the queued→running flip and completion) goes back to queued. The
+  // stable wf:<run_id> send key keeps re-execution single-send.
+  const stuckBefore = new Date(now.getTime() - STUCK_RUN_MINUTES * 60_000).toISOString();
+  const { data: stuck } = await db
+    .from("workflow_runs")
+    .update({ status: "queued", started_at: null })
+    .eq("project_id", projectId)
+    .eq("status", "running")
+    .lt("started_at", stuckBefore)
+    .select("id");
+  runsReset = stuck?.length ?? 0;
+  // A reset run already passed its due gate when it was first claimed
+  // (it died mid-execution), so it is due by construction. Execute it
+  // directly: the due scan below compares app-clock `now` against DB
+  // `created_at`, and clock skew would otherwise park a freshly reset
+  // run in queued until the next reconcile pass.
+  for (const row of stuck ?? []) {
+    await executeRun(projectId, String(row.id), deps);
+    runsExecuted += 1;
+  }
 
   const { data: pending } = await db
     .from("app_events")
@@ -589,5 +615,5 @@ export async function reconcileProject(
     await executeRun(projectId, String(row.id), deps);
     runsExecuted += 1;
   }
-  return { events_reconciled: eventsReconciled, runs_executed: runsExecuted };
+  return { events_reconciled: eventsReconciled, runs_executed: runsExecuted, runs_reset: runsReset };
 }

@@ -220,7 +220,7 @@ export class MailmaanClient {
     });
   }
 
-  async reconcileEvents(): Promise<{ events_reconciled: number; runs_executed: number }> {
+  async reconcileEvents(): Promise<{ events_reconciled: number; runs_executed: number; runs_reset: number }> {
     return this.request("POST", "/v1/events/reconcile");
   }
 }

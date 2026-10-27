@@ -1,5 +1,6 @@
 import "server-only";
 import { createSupabaseServiceClient } from "../supabase/service";
+import { suppressEmail } from "../suppression/service";
 import { MailmaanDeliveryProvider, type UpstreamStatus } from "./provider";
 
 /**
@@ -75,7 +76,7 @@ export async function syncMessageFromUpstream(
   const db = createSupabaseServiceClient();
   const { data: message, error } = await db
     .from("messages")
-    .select("id, status, provider_message_id")
+    .select("id, status, provider_message_id, recipient_email")
     .eq("id", messageId)
     .eq("project_id", projectId)
     .maybeSingle();
@@ -167,6 +168,17 @@ export async function syncMessageFromUpstream(
     .update({ mapping_outcome: `state:${canonical}`, processing_status: "processed" })
     .eq("provider", "mailmaan")
     .eq("provider_event_id", providerEventId);
+
+  // Bounces and complaints suppress future sends to the recipient.
+  // Plain failures do not (they may be transient or credential issues).
+  if ((canonical === "bounced" || canonical === "complained") && message.recipient_email) {
+    await suppressEmail(
+      projectId,
+      String(message.recipient_email),
+      canonical === "bounced" ? "hard_bounce" : "complaint",
+      { sourceMessageId: message.id, note: `upstream_${upstream.status}` },
+    );
+  }
 
   return { message_id: message.id, status: canonical, upstream, outcome: "updated" };
 }

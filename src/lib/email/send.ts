@@ -2,6 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { getServerEnv } from "../env";
 import { getSmtpCredentialsForSend, SmtpNotConfiguredError } from "../smtp/service";
+import { isSuppressed } from "../suppression/service";
 import { createSupabaseServiceClient } from "../supabase/service";
 import { TemplateService } from "../templates/service";
 import { renderTemplate, validateVariableValues } from "./render";
@@ -214,6 +215,62 @@ export async function queueEmailSend(
   const fromEmail = input.from?.trim() || smtp.from_email;
   if (!EMAIL_PATTERN.test(fromEmail) || /[\r\n]/.test(fromEmail)) {
     throw new EmailSendError("invalid_sender", "Sender address is invalid.", 422);
+  }
+
+  // Policy gate at the send boundary: suppressed recipients get a stored
+  // `suppressed` message and timeline, never a provider call.
+  if (await isSuppressed(input.projectId, to)) {
+    const { data: suppressed, error: suppressedError } = await db
+      .from("messages")
+      .insert({
+        project_id: input.projectId,
+        template_id: template.id,
+        template_version: template.version,
+        recipient_email: to,
+        from_email: fromEmail,
+        subject: rendered.subject,
+        status: "suppressed",
+        provider: "mailmaan",
+        idempotency_key: input.idempotencyKey,
+        request_hash: requestHash,
+        request_id: input.requestId ?? null,
+        queued_at: now,
+        metadata: { ...metadata, template_slug: templateSlug },
+      })
+      .select("*")
+      .single();
+    if (suppressedError || !suppressed) {
+      if (suppressedError?.code === "23505") {
+        const { data: raced } = await db
+          .from("messages")
+          .select("*")
+          .eq("project_id", input.projectId)
+          .eq("idempotency_key", input.idempotencyKey)
+          .maybeSingle();
+        if (raced && raced.request_hash === requestHash) {
+          return toQueuedEmail(raced as Record<string, unknown>, true);
+        }
+        throw new EmailSendError(
+          "idempotency_key_reused",
+          "Idempotency-Key was already used with a different request body.",
+          422,
+        );
+      }
+      throw new Error(`Failed to persist message: ${suppressedError?.message ?? "unknown error"}`);
+    }
+    await db.from("message_events").insert({
+      project_id: input.projectId,
+      message_id: String(suppressed.id),
+      source: "mailmaan",
+      event_type: "suppressed",
+      occurred_at: now,
+      payload_redacted: {
+        template_slug: templateSlug,
+        reason: "recipient_suppressed",
+        ...(input.requestId ? { request_id: input.requestId } : {}),
+      },
+    });
+    return toQueuedEmail(suppressed as Record<string, unknown>, false);
   }
 
   const { data: created, error: createError } = await db

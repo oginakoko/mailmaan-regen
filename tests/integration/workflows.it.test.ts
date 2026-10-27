@@ -242,14 +242,14 @@ describe.skipIf(!hasKeys)("workflow engine (integration)", () => {
       expect(provider.calls).toBe(0);
 
       const early = await reconcileProject(projectId, { provider });
-      expect(early).toEqual({ events_reconciled: 0, runs_executed: 0 });
+      expect(early).toEqual({ events_reconciled: 0, runs_executed: 0, runs_reset: 0 });
       expect(provider.calls).toBe(0);
 
       const late = await reconcileProject(projectId, {
         provider,
         now: new Date(Date.now() + 3700 * 1000),
       });
-      expect(late).toEqual({ events_reconciled: 0, runs_executed: 1 });
+      expect(late).toEqual({ events_reconciled: 0, runs_executed: 1, runs_reset: 0 });
       expect(provider.calls).toBe(1);
       const service = createSupabaseServiceClient();
       const { data: run } = await service

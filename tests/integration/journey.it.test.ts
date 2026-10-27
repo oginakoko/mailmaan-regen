@@ -63,8 +63,12 @@ const hasKeys = Boolean(
 );
 
 class StubProvider implements DeliveryProvider {
+  private readonly runTag = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
   async send(): Promise<ProviderSendResult> {
-    return { providerMessageId: "<journey-stub@example>", status: "sent" };
+    // Unique per run: sync journal rows survive probe-project deletion
+    // (audit trail), and the (provider, provider_event_id) unique key
+    // would otherwise collide across reruns.
+    return { providerMessageId: `<journey-stub-${this.runTag}@example>`, status: "sent" };
   }
 }
 

@@ -52,16 +52,20 @@ const hasKeys = Boolean(envLocal.SUPABASE_SERVICE_ROLE_KEY && envLocal.NEXT_PUBL
 describe.skipIf(!hasKeys)("rate limiting (integration)", () => {
   it("allows up to the limit, then denies with reset info", async () => {
     const key = `rl-probe-${randomUUID()}`;
-    const first = await checkRateLimit(key, "write", { limit: 2, windowSeconds: 60 });
+    // Pin all calls to mid-window: fixed epoch windows mean two live-clock
+    // calls can straddle a minute boundary and land in different windows.
+    const mid = Date.now() - (Date.now() % 60_000) + 30_000;
+    const atMid = { limit: 2, windowSeconds: 60, now: new Date(mid) };
+    const first = await checkRateLimit(key, "write", atMid);
     expect(first.allowed).toBe(true);
     expect(first.remaining).toBe(1);
-    const second = await checkRateLimit(key, "write", { limit: 2, windowSeconds: 60 });
+    const second = await checkRateLimit(key, "write", atMid);
     expect(second.allowed).toBe(true);
     expect(second.remaining).toBe(0);
-    const third = await checkRateLimit(key, "write", { limit: 2, windowSeconds: 60 });
+    const third = await checkRateLimit(key, "write", atMid);
     expect(third.allowed).toBe(false);
     expect(third.remaining).toBe(0);
-    expect(new Date(third.resetAt).getTime()).toBeGreaterThan(Date.now());
+    expect(third.resetAt).toBe(new Date(mid + 30_000).toISOString());
 
     // Buckets and keys are independent.
     const otherBucket = await checkRateLimit(key, "read", { limit: 2, windowSeconds: 60 });
