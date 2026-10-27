@@ -117,6 +117,12 @@ async function DashboardContent() {
                   >
                     SMTP
                   </a>
+                  <a
+                    className="text-sm font-medium text-zinc-900 underline underline-offset-4 dark:text-zinc-100"
+                    href={`/dashboard/projects/${project.id}/messages`}
+                  >
+                    Messages
+                  </a>
                 </div>
               </li>
             ))}
