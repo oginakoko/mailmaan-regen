@@ -149,15 +149,15 @@ async function TrackOrderContent({
         </section>
 
         <section className="mt-6 rounded-lg border border-stone-300 bg-white p-6">
-          <h2 className="font-serif text-xl">AI thank-you email</h2>
+          <h2 className="font-serif text-xl">Your turn: brief the AI</h2>
           {!delivered ? (
             <p className="mt-1 text-sm text-stone-500">
-              This unlocks when the order is delivered — the finale of the demo.
+              This unlocks when all six lifecycle emails are done — the finale of the demo.
             </p>
           ) : (
             <p className="mt-1 text-sm text-stone-500">
-              Delivered! Now brief the AI for a one-off thank-you email. You
-              review the draft before anything sends.
+              All stages emailed! Now brief the AI for your own custom one-off
+              email. You review the draft before anything sends.
             </p>
           )}
           {query.aiError ? (

@@ -38,7 +38,24 @@ export const DEMO_STAGES: Array<{ key: string; label: string; event: string; due
   { key: "shipped", label: "Shipped", event: "order.shipped", dueSeconds: 120 },
   { key: "out_for_delivery", label: "Out for delivery", event: "order.out_for_delivery", dueSeconds: 180 },
   { key: "delivered", label: "Delivered", event: "order.delivered", dueSeconds: 240 },
+  { key: "thank_you", label: "Thank-you note", event: "order.thank_you", dueSeconds: 300 },
 ];
+
+/** One quote per order, stable per order number — every thank-you is unique. */
+const THANK_YOU_QUOTES = [
+  "Great coffee, like a good day, starts with intention.",
+  "Life begins after coffee.",
+  "May your coffee be strong and your Monday short.",
+  "Adventure in every cup.",
+  "Brewed for slow mornings and big plans.",
+  "First sip focus, second sip courage.",
+];
+
+export function quoteForOrder(orderNumber: string): string {
+  let hash = 0;
+  for (let i = 0; i < orderNumber.length; i += 1) hash = (hash * 31 + orderNumber.charCodeAt(i)) >>> 0;
+  return THANK_YOU_QUOTES[hash % THANK_YOU_QUOTES.length];
+}
 
 function demoApiKey(): string {
   // Server-only: never import this module from client components.
@@ -91,6 +108,7 @@ export async function fireDemoStageEvent(
   stageKey: string,
 ): Promise<{ ok: boolean; code?: string; message?: string }> {
   const bypass = process.env.MAILMAAN_DEMO_BYPASS;
+  const qty = Math.max(1, Math.round(Number(order.total) / 1850) || 1);
   const response = await fetch(`${demoBaseUrl()}/v1/events`, {
     method: "POST",
     headers: {
@@ -108,6 +126,8 @@ export async function fireDemoStageEvent(
         total: order.total,
         currency: order.currency,
         trackingUrl: demoTrackingUrl(order.id),
+        quote: quoteForOrder(order.order_number),
+        productLine: `Soko Coffee AA × ${qty}`,
       },
     }),
   });
