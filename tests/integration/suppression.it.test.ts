@@ -128,8 +128,8 @@ describe.skipIf(!hasKeys)("suppression (integration)", () => {
     try {
       await makeProbeTemplate(projectId);
       await makeProbeSmtp(projectId);
-      // Recipient must be allowlisted (MAILMAAN_TEST_RECIPIENTS); the
-      // allowlist check runs before suppression at the send boundary.
+      // Uses the test inbox: if MAILMAAN_TEST_RECIPIENTS is configured,
+      // the allowlist check runs before suppression at the send boundary.
       await suppressEmail(projectId, "PhilipStar98@Gmail.com", "manual");
       expect(await isSuppressed(projectId, "philipstar98@gmail.com")).toBe(true);
       expect(await isSuppressed(projectId, "other@example.com")).toBe(false);

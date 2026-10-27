@@ -99,8 +99,10 @@ test event → read timeline → diagnose from evidence.
 
 - Rate limits: 120 writes/min, 600 reads/min per key; 429 carries
   `Retry-After`.
-- Test allowlist: while `MAILMAAN_TEST_RECIPIENTS` is set, `to` must
-  be allowlisted (422 `recipient_not_allowed` otherwise).
+- Any recipient: Mailmaan sends to any valid email address. (An
+  optional `MAILMAAN_TEST_RECIPIENTS` server setting can restrict a
+  deployment to a test list; it is unset by default.) The public Soko
+  demo throttles itself to 3 orders per email per hour.
 - Common codes: `smtp_not_configured` (connect a mailbox),
   `missing required variable` / `unknown variable supplied` (fix event
   data or mappings), `recipient_suppressed` (bounce/complaint history),

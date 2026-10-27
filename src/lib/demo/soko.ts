@@ -27,6 +27,9 @@ export interface DemoStage {
   event: string;
   dueSeconds: number;
   fired: boolean;
+  /** Workflow run outcome once fired; surfaced so failed emails never look sent. */
+  runStatus: string | null;
+  runError: string | null;
 }
 
 export const DEMO_STAGES: Array<{ key: string; label: string; event: string; dueSeconds: number }> = [
@@ -141,20 +144,49 @@ export async function advanceDemoOrder(orderId: string): Promise<{
       .eq("external_event_id", externalId)
       .maybeSingle();
     if (existing) {
-      stages.push({ ...stage, fired: true });
+      stages.push({ ...stage, fired: true, runStatus: null, runError: null });
       continue;
     }
     if (elapsed < stage.dueSeconds) {
-      stages.push({ ...stage, fired: false });
+      stages.push({ ...stage, fired: false, runStatus: null, runError: null });
       continue;
     }
     const result = await fireDemoStageEvent(order, stage.event, stage.key);
     if (!result.ok) {
       error = result.message ?? result.code ?? "Event fire failed.";
-      stages.push({ ...stage, fired: false });
+      stages.push({ ...stage, fired: false, runStatus: null, runError: null });
       break;
     }
-    stages.push({ ...stage, fired: true });
+    stages.push({ ...stage, fired: true, runStatus: null, runError: null });
+  }
+
+  // Attach workflow run outcomes so failed emails never render as sent.
+  const firedStages = stages.filter((stage) => stage.fired);
+  if (firedStages.length > 0) {
+    const externalIds = firedStages.map((stage) => `soko-demo/${order.order_number}/${stage.key}`);
+    const { data: events } = await db
+      .from("app_events")
+      .select("id, external_event_id")
+      .eq("project_id", order.project_id)
+      .in("external_event_id", externalIds);
+    const eventByExternal = new Map((events ?? []).map((e) => [e.external_event_id as string, e.id as string]));
+    const eventIds = [...eventByExternal.values()];
+    if (eventIds.length > 0) {
+      const { data: runs } = await db
+        .from("workflow_runs")
+        .select("app_event_id, status, error_code, error_message")
+        .in("app_event_id", eventIds);
+      const runByEvent = new Map((runs ?? []).map((r) => [r.app_event_id as string, r]));
+      for (const stage of firedStages) {
+        const eventId = eventByExternal.get(`soko-demo/${order.order_number}/${stage.key}`);
+        const run = eventId ? runByEvent.get(eventId) : undefined;
+        stage.runStatus = (run?.status as string | undefined) ?? "pending";
+        stage.runError =
+          run?.status === "failed"
+            ? ((run.error_message as string | undefined) ?? (run.error_code as string | undefined) ?? "Send failed.")
+            : null;
+      }
+    }
   }
   return { order, stages, ...(error ? { error } : {}) };
 }

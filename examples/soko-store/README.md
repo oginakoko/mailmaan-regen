@@ -34,9 +34,9 @@ cp .env.example .env
 ```
 
 The target project needs published `welcome` + `receipt` templates,
-`user.signed_up` → welcome and `order.paid` → receipt workflows, an
-SMTP mailbox, and the recipient on the test allowlist. The seeded
-`[Demo] Soko Store` project ships exactly this wiring.
+`user.signed_up` → welcome and `order.paid` → receipt workflows, and an
+SMTP mailbox. The seeded `[Demo] Soko Store` project ships exactly this
+wiring.
 
 ## Run
 

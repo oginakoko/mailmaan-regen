@@ -29,6 +29,18 @@ async function checkoutAction(formData: FormData): Promise<void> {
   const db = createSupabaseServiceClient();
   const { data: project } = await db.from("projects").select("id").eq("slug", "demo-soko-judges").maybeSingle();
   if (!project) redirect("/demo/soko?error=Demo%20project%20is%20missing.");
+  // Public demo form with no recipient allowlist: throttle per address so
+  // the store cannot be used as a bulk sender. Legit testing is unaffected.
+  const hourAgo = new Date(Date.now() - 60 * 60_000).toISOString();
+  const { count: recentOrders } = await db
+    .from("demo_orders")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", project.id)
+    .eq("email", email)
+    .gte("placed_at", hourAgo);
+  if ((recentOrders ?? 0) >= 3) {
+    redirect("/demo/soko?error=Demo%20limit%3A%203%20orders%20per%20hour%20per%20email.");
+  }
   const { data: order, error } = await db
     .from("demo_orders")
     .insert({
@@ -59,7 +71,7 @@ async function SokoStoreContent({ searchParams }: { searchParams: Promise<{ erro
       <div className="mx-auto w-full max-w-5xl px-6 py-10">
         <header className="flex items-baseline justify-between border-b border-stone-300 pb-4">
           <p className="font-serif text-2xl tracking-tight">Soko</p>
-          <p className="text-sm text-stone-500">Demo store · no payment · emails to the test inbox</p>
+          <p className="text-sm text-stone-500">Demo store · no payment · emails straight to your inbox</p>
         </header>
 
         {query.error ? (
