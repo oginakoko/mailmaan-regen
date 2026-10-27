@@ -52,4 +52,4 @@ runs per send (slow, costly, non-deterministic).
 4. Read timelines (`GET /v1/messages/:id`), sync upstream state
    (`POST /v1/messages/:id/sync`), diagnose from evidence.
 
-Full API walkthrough: [`docs/developer-guide.md`](developer-guide.md).
+Full API walkthrough: [developer guide](/docs/developer-guide).
