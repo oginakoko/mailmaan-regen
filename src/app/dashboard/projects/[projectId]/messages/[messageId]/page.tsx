@@ -1,24 +1,14 @@
+import Link from "next/link";
 import { Suspense } from "react";
-import { notFound, redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
+import { requireOwnedProject } from "@/lib/dashboard/projects";
 import { describeStatus, getMessageDetail } from "@/lib/email/messages";
 import { MessageSyncError, syncMessageFromUpstream } from "@/lib/email/status-sync";
-
-async function requireOwnedProject(projectId: string) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, slug")
-    .eq("id", projectId)
-    .maybeSingle();
-  if (!project) notFound();
-  return project;
-}
+import { Banner } from "@/components/ui/banner";
+import { SubmitButton } from "@/components/ui/button";
+import { StatusPill } from "@/components/ui/pill";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 async function syncAction(formData: FormData) {
   "use server";
@@ -39,14 +29,6 @@ async function syncAction(formData: FormData) {
   }
 }
 
-function toneClass(tone: string): string {
-  if (tone === "ok") return "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200";
-  if (tone === "bad") return "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200";
-  if (tone === "warn")
-    return "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200";
-  return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
-}
-
 const SYNC_NOTES: Record<string, string> = {
   updated: "Provider state applied to the timeline.",
   confirmed: "Provider agrees with the stored state — nothing changed.",
@@ -64,113 +46,100 @@ async function MessageDetailContent({
 }) {
   const { projectId, messageId } = await params;
   const query = await searchParams;
-  const project = await requireOwnedProject(projectId);
+  await requireOwnedProject(projectId);
   const detail = await getMessageDetail(projectId, messageId);
   if (!detail) notFound();
   const described = describeStatus(detail.status);
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-12">
-      <header className="space-y-1">
-        <a
+    <div className="flex flex-col gap-6">
+      <div>
+        <Link
           href={`/dashboard/projects/${projectId}/messages`}
-          className="text-sm text-zinc-500 underline underline-offset-4"
+          className="text-sm font-medium text-[#1c1917]/55 underline underline-offset-4 hover:text-[#1c1917]"
         >
           ← Messages
-        </a>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          {detail.subject}
-        </h1>
-        <p className="font-mono text-xs text-zinc-500">
-          {detail.id} · {project.name}
-        </p>
-      </header>
+        </Link>
+        <h2 className="mt-1 font-display text-2xl font-medium tracking-tight">{detail.subject}</h2>
+        <p className="mt-1 truncate font-mono text-xs text-[#1c1917]/50">{detail.id}</p>
+      </div>
 
-      {query.error ? (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{query.error}</p>
-      ) : null}
+      {query.error ? <Banner tone="error">{query.error}</Banner> : null}
       {query.synced ? (
-        <p className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
-          Sync: {query.synced}. {SYNC_NOTES[query.synced] ?? ""}
-        </p>
+        <Banner tone="success" title={`Sync: ${query.synced}.`}>
+          {SYNC_NOTES[query.synced] ?? ""}
+        </Banner>
       ) : null}
 
-      <section className="space-y-2 rounded-xl border border-zinc-200 px-4 py-4 text-sm dark:border-zinc-800">
+      <section className="rounded-2xl border border-[#1c1917]/10 bg-white p-5 shadow-sm sm:p-6" aria-label="Message evidence">
         <p>
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-medium ${toneClass(described.tone)}`}
-          >
-            {described.label}
-          </span>
+          <StatusPill tone={described.tone} label={described.label} />
         </p>
-        <dl className="grid gap-1 pt-2 sm:grid-cols-[140px_1fr]">
-          <dt className="text-zinc-500">To</dt>
+        <dl className="mt-4 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[140px_1fr]">
+          <dt className="text-[#1c1917]/55">To</dt>
           <dd className="font-mono text-xs">{detail.recipient_email}</dd>
-          <dt className="text-zinc-500">From</dt>
+          <dt className="text-[#1c1917]/55">From</dt>
           <dd className="font-mono text-xs">{detail.from_email}</dd>
-          <dt className="text-zinc-500">Provider</dt>
+          <dt className="text-[#1c1917]/55">Provider</dt>
           <dd className="font-mono text-xs">
             {detail.provider}
             {detail.provider_message_id ? ` · ${detail.provider_message_id}` : " · (never accepted)"}
           </dd>
           {detail.error_code ? (
             <>
-              <dt className="text-zinc-500">Error</dt>
-              <dd className="font-mono text-xs text-red-700 dark:text-red-300">
+              <dt className="text-[#1c1917]/55">Error</dt>
+              <dd className="font-mono text-xs font-semibold text-[#7e2a1b]">
                 {detail.error_code}
                 {detail.error_message ? ` — ${detail.error_message}` : ""}
               </dd>
             </>
           ) : null}
-          <dt className="text-zinc-500">Queued</dt>
+          <dt className="text-[#1c1917]/55">Queued</dt>
           <dd className="text-xs">{detail.queued_at ? new Date(detail.queued_at).toLocaleString() : "—"}</dd>
-          <dt className="text-zinc-500">Accepted</dt>
+          <dt className="text-[#1c1917]/55">Accepted</dt>
           <dd className="text-xs">{detail.accepted_at ? new Date(detail.accepted_at).toLocaleString() : "—"}</dd>
-          <dt className="text-zinc-500">Delivered</dt>
+          <dt className="text-[#1c1917]/55">Delivered</dt>
           <dd className="text-xs">
             {detail.delivered_at ? new Date(detail.delivered_at).toLocaleString() : "Unconfirmed"}
           </dd>
-          <dt className="text-zinc-500">Request ID</dt>
+          <dt className="text-[#1c1917]/55">Request ID</dt>
           <dd className="font-mono text-xs">{detail.request_id ?? "—"}</dd>
         </dl>
         {detail.provider_message_id ? (
-          <form action={syncAction} className="pt-2">
+          <form action={syncAction} className="mt-4 border-t border-[#1c1917]/10 pt-4">
             <input type="hidden" name="projectId" value={projectId} />
             <input type="hidden" name="messageId" value={messageId} />
-            <button
-              type="submit"
-              className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-            >
+            <SubmitButton variant="secondary" pendingLabel="Asking the provider…">
               Sync from provider
-            </button>
+            </SubmitButton>
           </form>
         ) : null}
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">Timeline</h2>
+      <section aria-label="Timeline">
+        <h3 className="text-sm font-semibold tracking-wider text-[#1c1917]/55 uppercase">Timeline</h3>
         {detail.timeline.length > 0 ? (
-          <ol className="space-y-2">
+          <ol className="mt-3 space-y-2">
             {detail.timeline.map((event) => (
               <li
                 key={event.id}
-                className="rounded-xl border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-800"
+                className="rounded-xl border border-[#1c1917]/10 bg-white px-4 py-3 text-sm shadow-sm"
               >
-                <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                <p className="font-semibold">
                   {event.event_type}{" "}
-                  <span className="font-normal text-zinc-500">· {event.source}</span>
+                  <span className="font-normal text-[#1c1917]/55">· {event.source}</span>
                 </p>
-                <p className="font-mono text-xs text-zinc-500">
+                <p className="mt-0.5 font-mono text-xs text-[#1c1917]/55">
                   {event.occurred_at ? new Date(event.occurred_at).toLocaleString() : "—"}
                 </p>
               </li>
             ))}
           </ol>
         ) : (
-          <p className="text-sm text-zinc-500">No events recorded.</p>
+          <p className="mt-2 text-sm text-[#1c1917]/55">No events recorded.</p>
         )}
       </section>
-    </main>
+    </div>
   );
 }
 
@@ -182,13 +151,7 @@ export default function MessageDetailPage({
   searchParams: Promise<{ error?: string; synced?: string }>;
 }) {
   return (
-    <Suspense
-      fallback={
-        <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-12">
-          <p className="text-sm text-zinc-500">Loading message…</p>
-        </main>
-      }
-    >
+    <Suspense fallback={<PageSkeleton titleWidth="w-56" cards={0} />}>
       <MessageDetailContent params={params} searchParams={searchParams} />
     </Suspense>
   );

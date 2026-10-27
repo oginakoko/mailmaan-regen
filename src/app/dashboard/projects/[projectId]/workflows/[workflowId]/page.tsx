@@ -1,24 +1,13 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireOwnedProject } from "@/lib/dashboard/projects";
 import { TemplateService } from "@/lib/templates/service";
 import { getWorkflow, updateWorkflow, WorkflowError } from "@/lib/workflows/service";
-
-async function requireOwnedProject(projectId: string) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, slug")
-    .eq("id", projectId)
-    .maybeSingle();
-  if (!project) notFound();
-  return project;
-}
+import { Banner } from "@/components/ui/banner";
+import { SubmitButton } from "@/components/ui/button";
+import { CheckboxField, SelectField, TextAreaField, TextField } from "@/components/ui/field";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 async function updateWorkflowAction(formData: FormData) {
   "use server";
@@ -71,85 +60,83 @@ async function EditWorkflowContent({
   if (!workflow) notFound();
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-12">
-      <header className="space-y-1">
-        <a
+    <div className="flex flex-col gap-6">
+      <div>
+        <Link
           href={`/dashboard/projects/${projectId}/workflows`}
-          className="text-sm text-zinc-500 underline underline-offset-4"
+          className="text-sm font-medium text-[#1c1917]/55 underline underline-offset-4 hover:text-[#1c1917]"
         >
           ← Workflows
-        </a>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+        </Link>
+        <h2 className="mt-1 font-display text-2xl font-medium tracking-tight">
           Edit — {workflow.name}
-        </h1>
-        <p className="font-mono text-xs text-zinc-500">
+        </h2>
+        <p className="mt-1 font-mono text-xs text-[#1c1917]/50">
           v{workflow.version} · {project.name}
         </p>
-      </header>
+      </div>
 
-      {query.error ? (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{query.error}</p>
-      ) : null}
+      {query.error ? <Banner tone="error">{query.error}</Banner> : null}
 
-      <section className="space-y-4 rounded-xl border border-zinc-200 p-5 dark:border-zinc-800">
-        <form action={updateWorkflowAction} className="grid gap-3 sm:grid-cols-2">
+      <section className="rounded-2xl border border-[#1c1917]/10 bg-white p-5 shadow-sm sm:p-6" aria-label="Edit workflow">
+        <form action={updateWorkflowAction} className="grid gap-4 sm:grid-cols-2">
           <input type="hidden" name="projectId" value={projectId} />
           <input type="hidden" name="workflowId" value={workflowId} />
-          <label className="space-y-1 text-sm">
-            <span className="font-medium">Name</span>
-            <input name="name" required defaultValue={workflow.name} className="w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900" />
-          </label>
-          <label className="space-y-1 text-sm">
-            <span className="font-medium">Trigger event</span>
-            <input name="trigger_event" required defaultValue={workflow.trigger_event} className="w-full rounded-lg border border-zinc-300 px-3 py-2 font-mono dark:border-zinc-700 dark:bg-zinc-900" />
-          </label>
-          <label className="space-y-1 text-sm">
-            <span className="font-medium">Template (published)</span>
-            <select name="template_id" required defaultValue={workflow.template_id ?? ""} className="w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900">
-              <option value="">Select a template…</option>
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.slug} (v{template.version})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="space-y-1 text-sm">
-            <span className="font-medium">Recipient path</span>
-            <input name="recipient_path" defaultValue={workflow.recipient_path} className="w-full rounded-lg border border-zinc-300 px-3 py-2 font-mono dark:border-zinc-700 dark:bg-zinc-900" />
-          </label>
-          <label className="space-y-1 text-sm sm:col-span-2">
-            <span className="font-medium">Conditions (JSON)</span>
-            <textarea
+          <TextField label="Name" name="name" required defaultValue={workflow.name} autoComplete="off" />
+          <TextField
+            label="Trigger event"
+            name="trigger_event"
+            required
+            defaultValue={workflow.trigger_event}
+            autoComplete="off"
+            mono
+          />
+          <SelectField label="Template (published)" name="template_id" required defaultValue={workflow.template_id ?? ""}>
+            <option value="">Select a template…</option>
+            {templates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.slug} (v{template.version})
+              </option>
+            ))}
+          </SelectField>
+          <TextField label="Recipient path" name="recipient_path" defaultValue={workflow.recipient_path} autoComplete="off" mono />
+          <div className="sm:col-span-2">
+            <TextAreaField
+              label="Conditions (JSON)"
               name="conditions"
               rows={3}
+              mono
               defaultValue={JSON.stringify(workflow.conditions)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-900"
             />
-          </label>
-          <label className="space-y-1 text-sm sm:col-span-2">
-            <span className="font-medium">Variable mappings (JSON)</span>
-            <textarea
+          </div>
+          <div className="sm:col-span-2">
+            <TextAreaField
+              label="Variable mappings (JSON)"
               name="variable_mappings"
               rows={3}
+              mono
               defaultValue={JSON.stringify(workflow.variable_mappings)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-900"
             />
-          </label>
-          <label className="space-y-1 text-sm">
-            <span className="font-medium">Delay (seconds, 0–86400)</span>
-            <input name="delay_seconds" inputMode="numeric" defaultValue={workflow.delay_seconds} className="w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900" />
-          </label>
-          <label className="flex items-center gap-2 self-end pb-2 text-sm">
-            <input type="checkbox" name="enabled" defaultChecked={workflow.enabled} className="h-4 w-4" />
-            <span>Enabled</span>
-          </label>
-          <button type="submit" className="rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 sm:col-span-2 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300">
-            Save workflow
-          </button>
+          </div>
+          <TextField
+            label="Delay (seconds, 0–86400)"
+            name="delay_seconds"
+            inputMode="numeric"
+            defaultValue={workflow.delay_seconds}
+            autoComplete="off"
+            mono
+          />
+          <div className="flex items-end pb-2">
+            <CheckboxField name="enabled" defaultChecked={workflow.enabled} label="Enabled" />
+          </div>
+          <div className="sm:col-span-2">
+            <SubmitButton pendingLabel="Saving workflow…" className="w-full sm:w-auto">
+              Save workflow
+            </SubmitButton>
+          </div>
         </form>
       </section>
-    </main>
+    </div>
   );
 }
 
@@ -161,13 +148,7 @@ export default function EditWorkflowPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   return (
-    <Suspense
-      fallback={
-        <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-12">
-          <p className="text-sm text-zinc-500">Loading workflow…</p>
-        </main>
-      }
-    >
+    <Suspense fallback={<PageSkeleton titleWidth="w-48" cards={0} />}>
       <EditWorkflowContent params={params} searchParams={searchParams} />
     </Suspense>
   );
