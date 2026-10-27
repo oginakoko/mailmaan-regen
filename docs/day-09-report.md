@@ -1,8 +1,9 @@
 # Day 9 Report — Hardening: rate limits, suppression, recovery, audit
 
-Branch: `day-09-hardening` → merge to `main` only after owner review.
-Status: code complete, all gates green, prod sweep green. Preview live
-probe is blocked on the Vercel SSO bypass secret (see §7).
+Branch: `day-09-hardening` → **merged to `main` (`884feaa`) and deployed
+to production** (`https://mailmaan-regen.vercel.app`).
+Status: complete. All gates green, preview + prod sweeps green, sweep
+artifacts deleted.
 
 ## 1. What was implemented
 
@@ -50,12 +51,20 @@ probe is blocked on the Vercel SSO bypass secret (see §7).
   `https://mailmaan-regen-382a5s7tg-philip-oginas-projects.vercel.app`
 - Anon REST probe of `api_rate_limit_bump` — **401** `permission denied
   for function` (was 200 before the lockdown).
-- Prod sweep (`https://mailmaan-regen.vercel.app`, unaffected `main`):
-  `GET /v1/health` → 200; `GET /v1/templates` valid key → 200
-  `{"templates":[]}`; bad key → 401 with `request_id`;
+- Pre-merge prod sweep (old `main`, unaffected): `GET /v1/health` →
+  200; `GET /v1/templates` valid key → 200 `{"templates":[]}`; bad key
+  → 401 with `request_id`; `POST /v1/events/reconcile` → 200 without
+  `runs_reset` (pre-Day-9 code, as expected).
+- Preview live sweep (Day 9 code, SSO bypass): `GET /v1/health` → 200;
   `POST /v1/events/reconcile` → 200
-  `{"events_reconciled":0,"runs_executed":0}` (no `runs_reset` — prod
-  still runs pre-Day-9 code, as expected).
+  `{"events_reconciled":0,"runs_executed":0,"runs_reset":0}`; 130
+  parallel `POST /v1/events` in one window → **120 × 202 then
+  10 × 429**, and a captured 429 carries `retry-after: 8` with body
+  `{"error":{"code":"rate_limited",…}}`.
+- Post-merge prod sweep (Day 9 live): health → 200, reconcile → 200
+  with `runs_reset`, templates → 200.
+- Cleanup verified: `day9-sweep` project, its 130 probe events, and its
+  API key all deleted (cascades); local key material shredded.
 
 ## 3. Bugs found and fixed during Day 9
 
@@ -137,22 +146,16 @@ suppression UI yet (documented gap).
 
 ## 6. Remaining risks and blockers
 
-- Preview live-route proof (HTTP 429 + `runs_reset` over the wire)
-  needs the Vercel Protection Bypass secret — asked below.
 - No cron for the reconciler/delayed runs (unchanged, Day 10?).
 - No manual suppression UI (documented gap).
 - Shared-DB note: Day 9 migrations (RPC lockdown, FK indexes) are
-  already applied to the linked Supabase project; prod code paths
-  using them (rate-limit RPC via service role) verified working.
-- Probe residue: `day9-sweep` project + key exist until the sweep
-  finishes, then deleted. Older probe projects (`iso-*`,
-  `day4-live-send`, `mailmaan-*@example.invalid` users) kept for audit.
+  applied to the linked Supabase project; prod code paths using them
+  verified working (live 429s, `runs_reset` on prod).
+- Probe residue: older projects (`iso-*`, `day4-live-send`,
+  `mailmaan-*@example.invalid` users) kept for audit.
 
-## 7. Next smallest steps
+## 7. Merge record
 
-1. Owner pastes the Vercel Protection Bypass secret (project Settings
-   → Deployment Protection → Protection Bypass for Automation).
-2. I run the preview sweep (health, `runs_reset` shape, 121-event
-   429 + `Retry-After`), delete the sweep project/key, and push the
-   report update.
-3. Review `day-09-hardening` → merge → `vercel --prod`.
+- `day-09-hardening` fast-forwarded to `main` (`3270ec7..884feaa`),
+  pushed, deployed with `vercel --prod`, verified live (see §2).
+- This report updated on `hotfix-day9-report-sweep`, then merged.
