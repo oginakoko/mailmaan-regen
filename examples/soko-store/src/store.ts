@@ -58,4 +58,19 @@ export class SokoStore {
       idempotencyKey: input.idempotencyKey,
     });
   }
+
+  /**
+   * Referral invite (added via MCP discovery): invites a friend with the
+   * welcome template. Template slug and required variables were confirmed
+   * through the `list_templates` MCP tool, not the database.
+   */
+  async inviteFriend(input: { inviteToken: string; friendEmail: string; friendName: string }) {
+    return this.mailmaan.sendEmail({
+      to: input.friendEmail,
+      template: "welcome",
+      variables: { firstName: input.friendName, product: "Soko" },
+      metadata: { source: "soko-invite", invite_token: input.inviteToken },
+      idempotencyKey: `soko-invite/${input.inviteToken}`,
+    });
+  }
 }

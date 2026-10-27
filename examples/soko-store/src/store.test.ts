@@ -42,4 +42,17 @@ describe("SokoStore", () => {
       idempotencyKey: "k1",
     });
   });
+
+  it("sends referral invites with stable invite idempotency", async () => {
+    const sendEmail = vi.fn(async () => ({ id: "m9" }));
+    const store = new SokoStore({ sendEmail } as unknown as MailmaanClient);
+    await store.inviteFriend({ inviteToken: "tok1", friendEmail: "a@example.com", friendName: "Jo" });
+    expect(sendEmail).toHaveBeenCalledWith({
+      to: "a@example.com",
+      template: "welcome",
+      variables: { firstName: "Jo", product: "Soko" },
+      metadata: { source: "soko-invite", invite_token: "tok1" },
+      idempotencyKey: "soko-invite/tok1",
+    });
+  });
 });
