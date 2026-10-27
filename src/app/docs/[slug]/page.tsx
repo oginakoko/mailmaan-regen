@@ -21,6 +21,11 @@ export function generateStaticParams() {
   return Object.keys(GUIDES).map((slug) => ({ slug }));
 }
 
+async function loadGuide(file: string): Promise<string> {
+  "use cache";
+  return readFile(join(process.cwd(), file), "utf8");
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -36,7 +41,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
   const { slug } = await params;
   const guide = GUIDES[slug];
   if (!guide) notFound();
-  const source = await readFile(join(process.cwd(), guide.file), "utf8");
+  const source = await loadGuide(guide.file);
   return (
     <article>
       <Markdown source={source} />
