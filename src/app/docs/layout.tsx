@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const NAV = [
   { href: "/docs/developer-guide", title: "Developer guide", note: "5-minute setup, event rules, agent path" },
   { href: "/docs/soko-demo", title: "Soko demo build", note: "How the example store works" },
@@ -9,13 +11,13 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-[#faf7f0] font-body text-[#1c1917]">
       <div className="mx-auto w-full max-w-6xl px-6 py-10">
         <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-[#1c1917]/15 pb-4">
-          <a href="/" className="font-display text-2xl tracking-tight">
+          <Link href="/" className="font-display text-2xl tracking-tight">
             Mailmaan
-          </a>
+          </Link>
           <nav className="flex flex-wrap gap-x-5 gap-y-1 text-sm font-medium">
-            <a href="/" className="text-[#1c1917]/60 hover:text-[#1c1917]">
+            <Link href="/" className="text-[#1c1917]/60 hover:text-[#1c1917]">
               Home
-            </a>
+            </Link>
             <a href="/demo/soko" className="text-[#1c1917]/60 hover:text-[#1c1917]">
               Live demo
             </a>
@@ -29,14 +31,14 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
             <nav className="space-y-1 lg:sticky lg:top-8">
               <p className="px-3 pb-2 text-xs tracking-[0.2em] text-[#1c1917]/50">DOCS</p>
               {NAV.map((item) => (
-                <a
+                <Link
                   key={item.href}
                   href={item.href}
                   className="block rounded-md px-3 py-2.5 transition-colors hover:bg-[#1c1917]/5"
                 >
                   <span className="block text-[15px] font-semibold">{item.title}</span>
                   <span className="block text-sm text-[#1c1917]/60">{item.note}</span>
-                </a>
+                </Link>
               ))}
             </nav>
           </aside>

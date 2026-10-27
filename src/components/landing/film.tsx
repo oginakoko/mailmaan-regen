@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
@@ -54,8 +56,9 @@ export default function LandingFilm() {
       gsap.from("[data-hero-fade]", { y: 24, opacity: 0, duration: 1, ease: "power2.out", stagger: 0.12, delay: 0.5 });
 
       // Pinned scenes first (ordering law), ambient after.
+      gsap.set("[data-hero-bg]", { scale: 1.25 });
       gsap.to("[data-hero-bg]", {
-        yPercent: 18,
+        yPercent: 10,
         ease: "none",
         scrollTrigger: { trigger: "[data-chapter='desk']", start: "top top", end: "bottom top", scrub: true },
       });
@@ -162,12 +165,15 @@ export default function LandingFilm() {
     <div ref={root} className="bg-[#f3ede2] font-body text-[#1c1917]">
       {/* ── Chapter 1 · The Desk ─────────────────────────────── */}
       <section data-chapter="desk" className="relative flex min-h-screen flex-col overflow-hidden">
-        <img
+        <Image
           data-hero-bg
           src="/landing/desk.webp"
           alt=""
           aria-hidden
-          className="absolute inset-0 h-[120%] w-full object-cover"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
         />
         <div className="absolute inset-0 bg-[#1c1917]/62" />
         <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6 py-24 text-[#f7f2e7]">
@@ -197,12 +203,12 @@ export default function LandingFilm() {
             >
               Fly the live demo
             </a>
-            <a
+            <Link
               href="/docs"
               className="rounded-md border border-[#f7f2e7]/40 px-6 py-3 text-sm font-semibold text-[#f7f2e7] transition-colors hover:bg-[#f7f2e7]/10"
             >
               Read the docs
-            </a>
+            </Link>
           </div>
         </div>
         <div data-hero-fade className="relative mx-auto w-full max-w-6xl px-6 pb-10">
@@ -212,11 +218,13 @@ export default function LandingFilm() {
 
       {/* ── Chapter 2 · The Seal ─────────────────────────────── */}
       <section data-chapter="seal" className="relative flex min-h-[130vh] flex-col overflow-hidden">
-        <img
+        <Image
           data-seal-bg
           src="/landing/envelope.webp"
           alt="A sealed kraft envelope"
-          className="absolute inset-0 h-full w-full object-cover"
+          fill
+          sizes="100vw"
+          className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#1c1917]/70 via-transparent to-[#1c1917]/80" />
         <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6 py-32">
@@ -250,10 +258,12 @@ export default function LandingFilm() {
 
       {/* ── Chapter 3 · The Flight (pinned) ──────────────────── */}
       <section data-chapter="flight" className="relative flex h-screen flex-col overflow-hidden">
-        <img
+        <Image
           src="/landing/rooftops.webp"
           alt="A paper plane crossing Nairobi rooftops at dusk"
-          className="absolute inset-0 h-full w-full object-cover"
+          fill
+          sizes="100vw"
+          className="object-cover"
         />
         <div className="absolute inset-0 bg-[#1c1917]/25" />
         <svg
@@ -297,10 +307,12 @@ export default function LandingFilm() {
 
       {/* ── Chapter 4 · The Landing ──────────────────────────── */}
       <section data-chapter="landing" className="relative flex min-h-screen flex-col overflow-hidden">
-        <img
+        <Image
           src="/landing/inboxglow.webp"
           alt="A letter sliding through a glowing mailbox slot"
-          className="absolute inset-0 h-full w-full object-cover"
+          fill
+          sizes="100vw"
+          className="object-cover"
         />
         <div className="absolute inset-0 bg-[#1c1917]/55" />
         <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6 py-32">
@@ -370,12 +382,12 @@ export default function LandingFilm() {
               >
                 Open the Soko demo
               </a>
-              <a
+              <Link
                 href="/docs/soko-demo"
                 className="rounded-md border border-white/50 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
               >
                 How the demo is built
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -388,18 +400,18 @@ export default function LandingFilm() {
                 through seven MCP tools.
               </p>
               <div className="mt-5 flex flex-wrap gap-3">
-                <a
+                <Link
                   href="/docs/developer-guide"
                   className="rounded-md bg-[#1c1917] px-5 py-2.5 text-sm font-semibold text-[#f7f2e7] transition-colors hover:bg-black"
                 >
                   Developer guide
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/docs/api"
                   className="rounded-md border border-[#1c1917]/30 px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-[#1c1917]/5"
                 >
                   API reference
-                </a>
+                </Link>
                 <a
                   href="/dashboard"
                   className="rounded-md border border-[#1c1917]/30 px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-[#1c1917]/5"
