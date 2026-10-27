@@ -1,0 +1,15 @@
+{
+  "name": "mailmaan-sdk",
+  "version": "0.1.0",
+  "description": "Typed server-side client for the Mailmaan email API.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "test": "vitest run"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
