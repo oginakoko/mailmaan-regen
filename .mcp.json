@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mailmaan": {
+      "command": "node",
+      "args": ["packages/mcp-server/dist/index.js"],
+      "env": {
+        "MAILMAAN_API_URL": "https://mailmaan-regen.vercel.app",
+        "MAILMAAN_API_KEY": "mk_live_replace_me"
+      }
+    }
+  }
+}
