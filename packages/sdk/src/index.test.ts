@@ -96,11 +96,14 @@ describe("MailmaanClient", () => {
     const { client, calls } = stubClient(async () =>
       jsonResponse(201, { template: { slug: "welcome", status: "draft" }, generated_by: "fallback" }),
     );
-    const result = await client.generateTemplate("welcome");
+    const result = await client.generateTemplate("welcome", {
+      brief: "thank the buyer",
+      requiredVariables: ["firstName"],
+    });
     expect(result.template.slug).toBe("welcome");
     expect(calls[0][0]).toBe("https://api.example/v1/templates/generate");
     const body = JSON.parse(String(calls[0][1]?.body)) as Record<string, unknown>;
-    expect(body).toEqual({ purpose: "welcome" });
+    expect(body).toEqual({ purpose: "welcome", brief: "thank the buyer", required_variables: ["firstName"] });
   });
 
   it("requires an API key at construction", () => {

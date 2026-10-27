@@ -63,6 +63,28 @@ export async function POST(request: Request) {
         { status: 422 },
       );
     }
+    const rawVars = record.required_variables;
+    let requiredVariables: string[] | undefined;
+    if (rawVars !== undefined) {
+      const valid =
+        Array.isArray(rawVars) &&
+        rawVars.length > 0 &&
+        rawVars.length <= 10 &&
+        rawVars.every((v) => typeof v === "string" && /^[A-Za-z][A-Za-z0-9_]*$/.test(v));
+      if (!valid) {
+        return NextResponse.json(
+          {
+            error: {
+              code: "invalid_required_variables",
+              message: "required_variables must be 1–10 identifier strings.",
+              request_id: requestId,
+            },
+          },
+          { status: 422 },
+        );
+      }
+      requiredVariables = [...(rawVars as string[])];
+    }
 
     const service = createSupabaseServiceClient();
     const { data: project } = await service
@@ -94,6 +116,7 @@ export async function POST(request: Request) {
       brand,
       purpose: purpose as (typeof TEMPLATE_PURPOSES)[number],
       ...(brief ? { brief } : {}),
+      ...(requiredVariables ? { requiredVariables } : {}),
     });
     const generated = await new TemplateService().createDraft(auth.project.id, draft, {
       generated_by: generatedBy,

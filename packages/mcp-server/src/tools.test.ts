@@ -43,15 +43,19 @@ describe("MCP tool handlers", () => {
   it("generates one template draft per purpose", async () => {
     let seen: unknown;
     const client = stubClient({
-      generateTemplate: async (purpose: unknown) => {
-        seen = purpose;
+      generateTemplate: async (purpose: unknown, opts: unknown) => {
+        seen = [purpose, opts];
         return { template: { slug: "welcome", status: "draft" }, generated_by: "fallback" };
       },
     });
-    const result = (await handleGenerateTemplate(client, { purpose: "welcome" })) as {
+    const result = (await handleGenerateTemplate(client, {
+      purpose: "welcome",
+      brief: "b",
+      requiredVariables: ["firstName"],
+    })) as {
       template: { status: string };
     };
-    expect(seen).toBe("welcome");
+    expect(seen).toEqual(["welcome", { brief: "b", requiredVariables: ["firstName"] }]);
     expect(result.template.status).toBe("draft");
   });
 

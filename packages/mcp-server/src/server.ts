@@ -90,6 +90,11 @@ export function createMailmaanServer(client: MailmaanClient): McpServer {
       inputSchema: {
         purpose: z.string().describe("Template purpose, e.g. welcome, password_reset, receipt, notification, custom."),
         brief: z.string().max(500).optional().describe("Free-text author brief, e.g. 'thank the buyer and ask for a review'."),
+        requiredVariables: z
+          .array(z.string())
+          .max(10)
+          .optional()
+          .describe("Variable names the template MUST use, e.g. ['firstName','orderId']."),
       },
     },
     async (input) => {
@@ -98,6 +103,7 @@ export function createMailmaanServer(client: MailmaanClient): McpServer {
           await handleGenerateTemplate(client, {
             purpose: input.purpose,
             ...(input.brief ? { brief: input.brief } : {}),
+            ...(input.requiredVariables ? { requiredVariables: input.requiredVariables as string[] } : {}),
           }),
         );
       } catch (error) {
