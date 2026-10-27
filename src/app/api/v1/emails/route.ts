@@ -44,6 +44,7 @@ export async function POST(request: Request) {
       metadata: (metadata ?? {}) as Record<string, unknown>,
       from: typeof from === "string" ? from : undefined,
       idempotencyKey,
+      requestId,
     });
 
     return NextResponse.json(

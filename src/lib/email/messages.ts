@@ -30,6 +30,7 @@ export interface MessageTimelineEvent {
 
 export interface MessageDetail extends MessageListItem {
   project_id: string;
+  request_id?: string | null;
   template_id: string | null;
   template_version: number | null;
   from_email: string;
@@ -64,7 +65,7 @@ export async function getMessageDetail(
   const { data: message, error } = await service
     .from("messages")
     .select(
-      "id, project_id, template_id, template_version, recipient_email, from_email, subject, status, provider, provider_message_id, idempotency_key, error_code, error_message, queued_at, accepted_at, delivered_at, failed_at, metadata, created_at",
+      "id, project_id, template_id, template_version, recipient_email, from_email, subject, status, provider, provider_message_id, idempotency_key, request_id, error_code, error_message, queued_at, accepted_at, delivered_at, failed_at, metadata, created_at",
     )
     .eq("id", messageId)
     .eq("project_id", projectId)

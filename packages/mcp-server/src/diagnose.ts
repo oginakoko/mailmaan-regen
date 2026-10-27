@@ -8,6 +8,7 @@
 
 export interface DiagnosisInputMessage {
   id: string;
+  request_id?: string | null;
   status: string;
   recipient_email: string;
   subject: string;
@@ -25,6 +26,7 @@ export interface DiagnosisInputEvent {
 
 export interface MessageDiagnosis {
   message_id: string;
+  request_id: string | null;
   status: string;
   delivered: boolean;
   summary: string;
@@ -133,8 +135,13 @@ export function diagnoseMessage(
     nextChecks = ["Run a provider sync for a fresh upstream read; absence of failure events means no news, not delivery."];
   }
 
+  const requestId = message.request_id ?? null;
+  if (requestId && nextChecks.length > 0) {
+    nextChecks = [...nextChecks, `Quote request id ${requestId} when correlating with server logs.`];
+  }
   return {
     message_id: message.id,
+    request_id: requestId,
     status: message.status,
     delivered: message.status === "delivered",
     summary,

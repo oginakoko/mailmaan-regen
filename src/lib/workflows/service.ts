@@ -269,7 +269,7 @@ async function failRun(
 export async function executeRun(
   projectId: string,
   runId: string,
-  deps?: { provider?: DeliveryProvider },
+  deps?: { provider?: DeliveryProvider; requestId?: string },
 ): Promise<WorkflowRunSummary> {
   const db = createSupabaseServiceClient();
   const { data: run, error: runError } = await db
@@ -372,6 +372,7 @@ export async function executeRun(
         variables: values,
         metadata: { workflow_id: workflow.id, run_id: runId, app_event_id: root.id },
         idempotencyKey: `wf:${runId}`,
+        ...(deps?.requestId ? { requestId: deps.requestId } : {}),
       },
       deps?.provider ? { provider: deps.provider } : undefined,
     );
@@ -397,7 +398,7 @@ async function matchAndRun(
   projectId: string,
   appEventId: string,
   eventName: string,
-  deps?: { provider?: DeliveryProvider },
+  deps?: { provider?: DeliveryProvider; requestId?: string },
 ): Promise<WorkflowRunSummary[]> {
   const { data: workflows, error } = await db
     .from("workflows")
@@ -453,7 +454,7 @@ async function matchAndRun(
 export async function ingestEvent(
   projectId: string,
   raw: { externalId?: string; name: string; data: unknown },
-  deps?: { provider?: DeliveryProvider },
+  deps?: { provider?: DeliveryProvider; requestId?: string },
 ): Promise<IngestedEvent> {
   const name = eventNameSchema.safeParse(raw.name);
   if (!name.success) {
@@ -500,6 +501,7 @@ export async function ingestEvent(
       event_name: name.data,
       payload,
       dispatch_status: "pending",
+      request_id: deps?.requestId ?? null,
     })
     .select("id, event_name")
     .single();
@@ -512,7 +514,10 @@ export async function ingestEvent(
   const eventId = String((created as Record<string, unknown>).id);
 
   try {
-    const runs = await matchAndRun(db, projectId, eventId, name.data, deps);
+    const runs = await matchAndRun(db, projectId, eventId, name.data, {
+      provider: deps?.provider,
+      requestId: deps?.requestId,
+    });
     await db
       .from("app_events")
       .update({ dispatch_status: "dispatched", dispatched_at: new Date().toISOString() })

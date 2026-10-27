@@ -32,11 +32,15 @@ export async function POST(request: Request) {
       );
     }
     const { id, name, data } = body as Record<string, unknown>;
-    const result = await ingestEvent(auth.project.id, {
-      externalId: typeof id === "string" ? id : undefined,
-      name: typeof name === "string" ? name : "",
-      data: data ?? {},
-    });
+    const result = await ingestEvent(
+      auth.project.id,
+      {
+        externalId: typeof id === "string" ? id : undefined,
+        name: typeof name === "string" ? name : "",
+        data: data ?? {},
+      },
+      { requestId },
+    );
     return NextResponse.json(
       {
         id: result.id,

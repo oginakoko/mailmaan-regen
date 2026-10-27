@@ -130,6 +130,8 @@ async function MessageDetailContent({
           <dd className="text-xs">
             {detail.delivered_at ? new Date(detail.delivered_at).toLocaleString() : "Unconfirmed"}
           </dd>
+          <dt className="text-zinc-500">Request ID</dt>
+          <dd className="font-mono text-xs">{detail.request_id ?? "—"}</dd>
         </dl>
         {detail.provider_message_id ? (
           <form action={syncAction} className="pt-2">

@@ -25,7 +25,7 @@ export async function GET(
     const { data: message, error } = await db
       .from("messages")
       .select(
-        "id, project_id, template_id, template_version, recipient_email, from_email, subject, status, provider, provider_message_id, idempotency_key, error_code, error_message, queued_at, accepted_at, delivered_at, failed_at, metadata, created_at, updated_at",
+        "id, project_id, template_id, template_version, recipient_email, from_email, subject, status, provider, provider_message_id, idempotency_key, request_id, error_code, error_message, queued_at, accepted_at, delivered_at, failed_at, metadata, created_at, updated_at",
       )
       .eq("id", id)
       .eq("project_id", auth.project.id)

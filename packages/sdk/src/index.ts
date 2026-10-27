@@ -71,6 +71,7 @@ export interface TimelineEvent {
 
 export interface MessageDetail {
   id: string;
+  request_id?: string | null;
   status: string;
   recipient_email: string;
   from_email: string;

@@ -90,6 +90,7 @@ export async function handleDiagnoseMessage(
   return diagnoseMessage(
     {
       id: message.id,
+      request_id: message.request_id ?? null,
       status: message.status,
       recipient_email: message.recipient_email,
       subject: message.subject,

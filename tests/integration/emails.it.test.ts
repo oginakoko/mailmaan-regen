@@ -256,6 +256,25 @@ describe.skipIf(!hasKeys)("send pipeline (integration)", () => {
       expect(failed?.status).toBe("failed");
       expect(failed?.error_code).toBe("delivery_rejected");
       expect(failed?.provider_message_id).toBeNull();
+
+      // Failed sends replay as failures (Stripe/Resend rule): retries must
+      // use a fresh key. The provider is never called again for fail-2.
+      provider.failWith = null;
+      const callsBefore = provider.calls;
+      const replayed = await queueEmailSend(
+        {
+          projectId,
+          to: "philipstar98@gmail.com",
+          template: "probe-welcome",
+          variables: { name: "Asha", app: "Soko" },
+          idempotencyKey: "fail-2",
+        },
+        { provider },
+      );
+      expect(replayed.replayed).toBe(true);
+      expect(replayed.status).toBe("failed");
+      expect(replayed.error_code).toBe("delivery_rejected");
+      expect(provider.calls).toBe(callsBefore);
     } finally {
       await createSupabaseServiceClient().from("projects").delete().eq("id", projectId);
     }

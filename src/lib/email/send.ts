@@ -43,6 +43,8 @@ export interface QueueEmailInput {
   metadata?: Record<string, unknown>;
   from?: string;
   idempotencyKey: string;
+  /** API request id for log correlation; persisted, never rendered into email. */
+  requestId?: string;
 }
 
 export interface QueuedEmail {
@@ -227,6 +229,7 @@ export async function queueEmailSend(
       provider: "mailmaan",
       idempotency_key: input.idempotencyKey,
       request_hash: requestHash,
+      request_id: input.requestId ?? null,
       queued_at: now,
       metadata: { ...metadata, template_slug: templateSlug },
     })
@@ -261,7 +264,11 @@ export async function queueEmailSend(
     source: "mailmaan",
     event_type: "queued",
     occurred_at: now,
-    payload_redacted: { template_slug: templateSlug, template_version: template.version },
+    payload_redacted: {
+      template_slug: templateSlug,
+      template_version: template.version,
+      ...(input.requestId ? { request_id: input.requestId } : {}),
+    },
   });
 
   const provider = deps?.provider ?? new MailmaanDeliveryProvider();

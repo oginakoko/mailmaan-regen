@@ -45,6 +45,25 @@ describe("diagnoseMessage", () => {
     expect(diagnosis.next_checks.join(" ")).toContain("SMTP page");
   });
 
+  it("carries the request id into the diagnosis for log correlation", () => {
+    const diagnosis = diagnoseMessage(
+      {
+        id: "m4",
+        request_id: "req-123",
+        status: "failed",
+        recipient_email: "a@example.com",
+        subject: "Hi",
+        provider: "mailmaan",
+        provider_message_id: null,
+        error_code: "smtp_not_configured",
+        error_message: "No mailbox.",
+      },
+      [],
+    );
+    expect(diagnosis.request_id).toBe("req-123");
+    expect(diagnosis.next_checks.join(" ")).toContain("req-123");
+  });
+
   it("admits unknown codes instead of inventing causes", () => {
     const diagnosis = diagnoseMessage(
       {
