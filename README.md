@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mailmaan (regen) — email runtime for AI-built applications
 
-## Getting Started
+Brand-matched templates, deterministic event workflows, managed delivery
+through the Mailmaan service, and truthful message timelines — driven by
+API key, TypeScript SDK, or MCP tools for coding agents.
 
-First, run the development server:
+Production: `https://mailmaan-regen.vercel.app` · Blueprint (canonical spec):
+`MAILMAAN_HACKATHON_MASTER_BLUEPRINT.md` (Documents folder, outside this repo).
+
+## Architecture
+
+- **Next.js + TypeScript app** (`src/`): public API (`/v1/*`), authenticated
+  dashboard, server-only service layer.
+- **Supabase/PostgreSQL**: projects, API keys (hashed, scoped), templates
+  (draft/publish/version), per-project SMTP configs (AES-256-GCM),
+  messages + event timelines, app events, workflows + runs.
+- **Delivery**: deployed Mailmaan service (`POST /v1/send`) with per-request
+  project SMTP + pre-rendered HTML. No other sender exists in this codebase
+  (see `docs/adr/0002-mailmaan-delivery-and-smtp.md`). No queue worker:
+  sends and workflow runs execute synchronously; delayed runs wait for the
+  reconciler (`POST /v1/events/reconcile`).
+- **Packages**: `packages/sdk` (typed client), `packages/mcp-server`
+  (6 stdio tools for agents). **Example**: `examples/soko-store`.
+
+## Setup
+
+Prerequisites: Node 20+, a Supabase project, Vercel CLI (deploys).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # then fill in (never commit)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Required server env (see `src/lib/env.ts` for the full schema):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Purpose |
+| -------- | ------- |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase access |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only data path (never `NEXT_PUBLIC_`) |
+| `MAILMAAN_DELIVERY_BASE_URL` / `MAILMAAN_DELIVERY_API_KEY` | Deployed Mailmaan service |
+| `MAILMAAN_SMTP_ENCRYPTION_KEY` | 32-byte hex (`openssl rand -hex 32`); encrypts project SMTP passwords |
+| `MAILMAAN_TEST_RECIPIENTS` | Comma-separated allowlist; empty = unrestricted (keep restricted in prod) |
+| `AI_API_KEY` / `AI_TEMPLATE_MODEL` (+`AI_BASE_URL`) | Optional Meta Muse generation; labelled fallback without |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Apply migrations in `supabase/migrations/` in order, then:
 
-## Learn More
+```bash
+npm run typecheck && npm run lint && npm test   # unit + live integration (needs .env.local)
+npm run build                                   # production bundle
+vercel deploy --prod                            # after merging to main
+```
 
-To learn more about Next.js, take a look at the following resources:
+Per-package checks: `npm run typecheck:packages`. Package READMEs cover
+the SDK/MCP/example setup (`packages/mcp-server/README.md`,
+`examples/soko-store/README.md`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Repo map
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `src/app/api/v1/` — `health`, `project`, `templates`, `emails`,
+  `messages/[id]` (+ `/sync`), `events` (+ `/reconcile`)
+- `src/app/dashboard/` — projects, templates, API keys, SMTP, messages,
+  workflows (all owner-scoped, server actions)
+- `src/lib/` — `api-keys`, `email` (render/provider/send/status-sync/messages),
+  `smtp` (encryption/service), `supabase`, `templates`, `workflows`
+- `supabase/migrations/` — schema in day order; `docs/adr/` — decisions;
+  `docs/day-0N-report.md` — daily evidence; `docs/checklist.md` — ten-day tracker
 
-## Deploy on Vercel
+## Conventions
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Feature branches (`day-0N-*`, `hotfix-*`); merge to `main` only after
+  owner review. `main` is what deploys to production.
+- Small reviewable changes with real test evidence. Never claim a test,
+  deploy, delivery, or integration works unless verified (see daily reports).
+- Truthful states only: `accepted` means provider-accepted, never delivered;
+  failures persist with codes and timelines. Secrets never logged.

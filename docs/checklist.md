@@ -26,29 +26,42 @@
   See `docs/day-03-report.md`.)
 
 ## Day 4 — Real email send path (ADR-0002: delivery via the Mailmaan service)
-- [ ] Per-project SMTP config storage (encrypted at rest) + settings UI (masked)
-- [ ] `EmailProvider` interface + Mailmaan service adapter (`POST /v1/send`, Bearer `MAILMAAN_DELIVERY_*`; no other sender, ever)
-- [ ] `POST /v1/emails` with idempotency + durable queued state; sends blocked when SMTP unconfigured
-- [ ] Real test email proof to the designated test inbox; truthful status mapping (never claim `delivered` without evidence)
+- [x] Per-project SMTP config storage (encrypted at rest) + settings UI (masked)
+- [x] `EmailProvider` interface + Mailmaan service adapter (`POST /v1/send`, Bearer `MAILMAAN_DELIVERY_*`; no other sender, ever)
+- [x] `POST /v1/emails` with idempotency + durable queued state; sends blocked when SMTP unconfigured
+- [x] Real test email proof to the designated test inbox; truthful status mapping (never claim `delivered` without evidence)
+- [x] Old-service per-request SMTP + raw-HTML extension (PR #112) merged, deployed, verified live
+  (Evidence: `docs/day-04-report.md`; inbox receipt confirmed by owner.)
 
 ## Day 5 — Webhooks and message observability
-- [ ] Message status read-back (only if the Mailmaan service exposes it; otherwise `accepted` is the last claimable state)
-- [ ] `GET /v1/messages/:id` + activity/timeline UI
-- [ ] Controlled failure test shown truthfully
+- [x] Message status read-back via `POST /v1/messages/:id/sync` (adaptation: no signed-webhook
+  producer exists, so provider truth arrives by read-back; upstream `sent` only confirms `accepted`)
+- [x] `GET /v1/messages/:id` (shipped Day 4) + activity/timeline UI + provider sync action
+- [x] Controlled failure test shown truthfully (wrong-password send → 502 + `failed` timeline)
+- [x] Old-service recording fixes (PRs #113/#114) merged, deployed, verified from both sides
+  (Evidence: `docs/day-05-report.md`.)
 
 ## Day 6 — Event ingestion and workflows
-- [ ] `POST /v1/events` with idempotency + dispatch state
-- [ ] Workflow CRUD + matching (user.signed_up → welcome, order.paid → receipt)
-- [ ] Pending-event reconciler
+- [x] `POST /v1/events` with idempotency + dispatch state (+ `POST /v1/events/reconcile`)
+- [x] Workflow CRUD + matching (user.signed_up → welcome, order.paid → receipt, live proof)
+- [x] Pending-event reconciler + delayed-run execution (synchronous architecture, no queue worker)
+  (Evidence: `docs/day-06-report.md`; two live workflow emails accepted.)
 
 ## Day 7 — SDK and MCP
-- [ ] TypeScript SDK over the public API
-- [ ] `examples/soko-store` using the SDK server-side
-- [ ] Local stdio MCP server; agent integration proof
+- [x] TypeScript SDK over the public API (`packages/sdk`, 6/6 tests, live demo proof)
+- [x] `examples/soko-store` using the SDK server-side (+ MCP-driven invite integration, live proof)
+- [x] Local stdio MCP server (6 tools) + `.mcp.json` agent config; machine proof over live stdio
+  (Evidence: `docs/day-07-report.md`.)
+- [x] Prod-build hotfix: Next typecheck scoped to the app; per-package checks via `typecheck:packages`
 
 ## Day 8 — End-to-end demonstration and diagnostics
-- [ ] Full journey walkthrough from setup to diagnosis
-- [ ] Diagnostics grounded in stored evidence; core test matrix green
+- [x] Full journey walkthrough from setup to diagnosis (`tests/integration/journey.it.test.ts`,
+  fresh project → key auth → template → SMTP → workflow → event → send → timeline → sync)
+- [x] Request IDs persisted (messages, app events, queued-event payloads) and surfaced in
+  API responses, dashboard detail, SDK types, and MCP diagnosis with log-correlation hints
+- [x] Adversarial matrix live on preview: cross-project 404s, scope 401s, malformed/oversize/
+  invalid inputs (400/413/422), duplicate-event replay, failed-send replay rule
+  (Evidence: `docs/day-08-report.md`, this file's Day 8 section completion.)
 
 ## Day 9 — Hardening, deployment and regression tests
 - [ ] Production-like webhook/retry/isolation tests; secret audit
