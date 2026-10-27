@@ -58,9 +58,15 @@ async function ProjectKeysContent({
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-12">
       <header className="space-y-1">
-        <a href="/dashboard" className="text-sm text-zinc-500 underline underline-offset-4">
-          ← All projects
-        </a>
+        <p className="text-sm text-zinc-500">
+          <a href="/dashboard" className="underline underline-offset-4">
+            ← All projects
+          </a>{" "}
+          ·{" "}
+          <a href={`/dashboard/projects/${projectId}`} className="underline underline-offset-4">
+            Project overview
+          </a>
+        </p>
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
           API keys — {project.name}
         </h1>

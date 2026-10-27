@@ -32,7 +32,7 @@ async function createProject(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { error } = await supabase.from("projects").insert({
+  const { data: created, error } = await supabase.from("projects").insert({
     owner_user_id: user.id,
     name,
     slug,
@@ -45,11 +45,11 @@ async function createProject(formData: FormData) {
     },
     default_from_email: fromEmail || null,
     default_from_name: fromName || null,
-  });
-  if (error) {
-    redirect(`/dashboard?error=${encodeURIComponent(error.message)}`);
+  }).select("id").single();
+  if (error || !created) {
+    redirect(`/dashboard?error=${encodeURIComponent(error?.message ?? "Could not create the project.")}`);
   }
-  redirect("/dashboard");
+  redirect(`/dashboard/projects/${created.id}`);
 }
 
 async function DashboardContent() {
@@ -101,6 +101,12 @@ async function DashboardContent() {
                 <div className="flex shrink-0 items-center gap-4">
                   <a
                     className="text-sm font-medium text-zinc-900 underline underline-offset-4 dark:text-zinc-100"
+                    href={`/dashboard/projects/${project.id}`}
+                  >
+                    Overview
+                  </a>
+                  <a
+                    className="text-sm font-medium text-zinc-900 underline underline-offset-4 dark:text-zinc-100"
                     href={`/dashboard/projects/${project.id}/templates`}
                   >
                     Templates
@@ -134,10 +140,18 @@ async function DashboardContent() {
             ))}
           </ul>
         ) : (
-          <p className="rounded-xl border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
-            No projects yet. Create your first project below to get an API key
-            and start wiring email into your app.
-          </p>
+          <div className="space-y-3 rounded-xl border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+            <p>
+              No projects yet. Create your first project below — you will land
+              on its setup checklist:
+            </p>
+            <ol className="list-decimal space-y-1 pl-5">
+              <li>Connect the mailbox the project sends from (your SMTP).</li>
+              <li>Publish a branded template with {"{{variables}}"}.</li>
+              <li>Create an API key for your app or coding agent.</li>
+              <li>Send — then watch the truthful timeline per message.</li>
+            </ol>
+          </div>
         )}
       </section>
 
