@@ -3,6 +3,7 @@ import type { MailmaanClient } from "mailmaan-sdk";
 import {
   handleConnectionCheck,
   handleDiagnoseMessage,
+  handleGenerateTemplate,
   handleGetMessage,
   handleListTemplates,
   handleSendTestEmail,
@@ -37,6 +38,21 @@ describe("MCP tool handlers", () => {
     expect(result.templates).toEqual([
       { slug: "welcome", name: "Welcome", purpose: "welcome", version: 1, required_variables: ["firstName"] },
     ]);
+  });
+
+  it("generates one template draft per purpose", async () => {
+    let seen: unknown;
+    const client = stubClient({
+      generateTemplate: async (purpose: unknown) => {
+        seen = purpose;
+        return { template: { slug: "welcome", status: "draft" }, generated_by: "fallback" };
+      },
+    });
+    const result = (await handleGenerateTemplate(client, { purpose: "welcome" })) as {
+      template: { status: string };
+    };
+    expect(seen).toBe("welcome");
+    expect(result.template.status).toBe("draft");
   });
 
   it("sends test email tagged with the MCP source", async () => {

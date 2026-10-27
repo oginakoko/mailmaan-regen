@@ -60,6 +60,14 @@ export interface TemplateSummary {
   variables: Array<{ name: string; type: string; required: boolean; example?: unknown }>;
 }
 
+export interface GeneratedTemplateDraft {
+  template: TemplateSummary & { status: string };
+  generated_by: string;
+  model: string | null;
+  notes: string | null;
+  dashboard_url: string;
+}
+
 export interface TimelineEvent {
   id: string;
   source: string;
@@ -181,6 +189,10 @@ export class MailmaanClient {
 
   async listTemplates(): Promise<{ templates: TemplateSummary[] }> {
     return this.request("GET", "/v1/templates");
+  }
+
+  async generateTemplate(purpose: string): Promise<GeneratedTemplateDraft> {
+    return this.request("POST", "/v1/templates/generate", { purpose });
   }
 
   async sendEmail(input: SendEmailInput): Promise<SentEmail> {

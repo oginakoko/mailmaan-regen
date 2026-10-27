@@ -4,6 +4,7 @@ import { MailmaanApiError, MailmaanClient } from "mailmaan-sdk";
 import {
   handleConnectionCheck,
   handleDiagnoseMessage,
+  handleGenerateTemplate,
   handleGetMessage,
   handleListTemplates,
   handleSendTestEmail,
@@ -11,9 +12,10 @@ import {
 } from "./tools.js";
 
 /**
- * Mailmaan MCP server (Day 7, stdio). Six tools for AI coding agents:
- * connection check, list templates, send test email, track event, get
- * message, diagnose message. API failures surface with code + request id.
+ * Mailmaan MCP server (Day 7, stdio). Seven tools for AI coding agents:
+ * connection check, list templates, generate template, send test email,
+ * track event, get message, diagnose message. API failures surface with
+ * code + request id.
  */
 
 function textResult(data: unknown): { content: Array<{ type: "text"; text: string }> } {
@@ -74,6 +76,24 @@ export function createMailmaanServer(client: MailmaanClient): McpServer {
     async () => {
       try {
         return textResult(await handleListTemplates(client));
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "generate_template",
+    {
+      description:
+        "Generate one template draft from the project brand for an email purpose (welcome, receipt, ...). Saved as a DRAFT for human review — publishing happens in the dashboard. Generate once per email type, then reuse the published slug for every user.",
+      inputSchema: {
+        purpose: z.string().describe("Template purpose, e.g. welcome, password_reset, receipt, notification, custom."),
+      },
+    },
+    async (input) => {
+      try {
+        return textResult(await handleGenerateTemplate(client, { purpose: input.purpose }));
       } catch (error) {
         return errorResult(error);
       }

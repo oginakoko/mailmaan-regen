@@ -92,6 +92,17 @@ describe("MailmaanClient", () => {
     expect(body).toEqual({ id: "ext-1", name: "user.signed_up", data: { email: "a@b.c" } });
   });
 
+  it("generates template drafts over the right path", async () => {
+    const { client, calls } = stubClient(async () =>
+      jsonResponse(201, { template: { slug: "welcome", status: "draft" }, generated_by: "fallback" }),
+    );
+    const result = await client.generateTemplate("welcome");
+    expect(result.template.slug).toBe("welcome");
+    expect(calls[0][0]).toBe("https://api.example/v1/templates/generate");
+    const body = JSON.parse(String(calls[0][1]?.body)) as Record<string, unknown>;
+    expect(body).toEqual({ purpose: "welcome" });
+  });
+
   it("requires an API key at construction", () => {
     expect(() => new MailmaanClient({ apiKey: "" })).toThrow(MailmaanApiError);
   });

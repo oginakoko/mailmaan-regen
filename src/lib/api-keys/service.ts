@@ -16,8 +16,8 @@ import { createSupabaseServiceClient } from "../supabase/service";
 export const API_KEY_PREFIX = "mk_live_";
 const SECRET_BYTES = 32;
 
-export type ApiKeyScope = "read" | "send" | "events";
-export const API_KEY_SCOPES: readonly ApiKeyScope[] = ["read", "send", "events"];
+export type ApiKeyScope = "read" | "send" | "events" | "templates";
+export const API_KEY_SCOPES: readonly ApiKeyScope[] = ["read", "send", "events", "templates"];
 
 function sha256Hex(value: string): string {
   return createHash("sha256").update(value).digest("hex");

@@ -44,6 +44,13 @@ export async function handleListTemplates(client: MailmaanClient): Promise<{
   };
 }
 
+export async function handleGenerateTemplate(
+  client: MailmaanClient,
+  input: { purpose: string },
+): Promise<unknown> {
+  return client.generateTemplate(input.purpose);
+}
+
 export async function handleSendTestEmail(
   client: MailmaanClient,
   input: { to: string; template: string; variables?: Record<string, unknown>; idempotencyKey?: string },
