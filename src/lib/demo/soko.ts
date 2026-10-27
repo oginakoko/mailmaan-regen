@@ -59,11 +59,15 @@ export async function callDemoMailmaan(
   path: string,
   body: Record<string, unknown>,
 ): Promise<{ ok: boolean; status: number; payload: Record<string, unknown> }> {
+  // Preview deployments sit behind Vercel SSO; the automation bypass lets
+  // this deployment call its own API. Unset (production) — header omitted.
+  const bypass = process.env.MAILMAAN_DEMO_BYPASS;
   const response = await fetch(`${demoBaseUrl()}${path}`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${demoApiKey()}`,
       "content-type": "application/json",
+      ...(bypass ? { "x-vercel-protection-bypass": bypass } : {}),
     },
     body: JSON.stringify(body),
   });
@@ -83,11 +87,13 @@ export async function fireDemoStageEvent(
   event: string,
   stageKey: string,
 ): Promise<{ ok: boolean; code?: string; message?: string }> {
+  const bypass = process.env.MAILMAAN_DEMO_BYPASS;
   const response = await fetch(`${demoBaseUrl()}/v1/events`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${demoApiKey()}`,
       "content-type": "application/json",
+      ...(bypass ? { "x-vercel-protection-bypass": bypass } : {}),
     },
     body: JSON.stringify({
       id: `soko-demo/${order.order_number}/${stageKey}`,
