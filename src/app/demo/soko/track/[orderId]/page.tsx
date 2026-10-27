@@ -56,10 +56,15 @@ async function sendAiAction(formData: FormData): Promise<void> {
     back(`?aiError=${encodeURIComponent(`The AI used variables this demo cannot fill: ${unknown.join(", ")}.`)}`);
   }
   await new TemplateService().publishTemplate(demo.project_id, draft.id);
+  // Pass only what the draft declares: strict validation rejects extras.
+  const declared = new Set((schema.variables ?? []).map((v) => v.name));
+  const values: Record<string, string> = {};
+  if (declared.has("firstName")) values.firstName = demo.first_name;
+  if (declared.has("orderId")) values.orderId = demo.order_number;
   const sent = await callDemoMailmaan("/v1/emails", {
     to: demo.email,
     template: draft.slug,
-    variables: { firstName: demo.first_name, orderId: demo.order_number },
+    variables: values,
     metadata: { source: "soko-demo-ai-thanks" },
     idempotencyKey: `soko-demo/${demo.order_number}/ai-thanks`,
   });
