@@ -1,5 +1,5 @@
 import { MailmaanClient } from "mailmaan-sdk";
-import { SokoStore } from "./store.ts";
+import { SokoStore } from "./store";
 
 /**
  * Live demo: signup + checkout through the real Mailmaan API.

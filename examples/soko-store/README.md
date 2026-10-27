@@ -12,6 +12,7 @@ cd ../../packages/sdk && npx tsup src/index.ts --format esm --dts --clean && cd 
 
 # 2. Install the example (links the local SDK)
 cd examples/soko-store && npm install
+# (demo bundles with the repo's esbuild; no extra install needed)
 
 # 3. Configure (server-side only — never commit the key)
 cp .env.example .env
