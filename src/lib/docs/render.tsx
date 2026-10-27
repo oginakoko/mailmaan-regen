@@ -168,15 +168,31 @@ export function Markdown({ source }: { source: string }) {
       continue;
     }
 
-    // Lists.
+    // Lists. Consecutive markers group into one list; indented lines
+    // continue the current item so wrapped source lines (and the inline
+    // markup spanning them) render as a single item.
     const listMatch = /^(\s*)([-*]|\d+[.)])\s+(.*)$/.exec(line);
     if (listMatch) {
       const ordered = /^\d/.test(listMatch[2]);
       const items: string[] = [];
       while (i < lines.length) {
         const m = /^(\s*)([-*]|\d+[.)])\s+(.*)$/.exec(lines[i]);
-        if (!m) break;
-        items.push(m[3]);
+        if (m && /^\d/.test(m[2]) === ordered) {
+          items.push(m[3]);
+          i += 1;
+          continue;
+        }
+        const trimmed = lines[i].trim();
+        const continuesItem =
+          items.length > 0 &&
+          !m &&
+          trimmed !== "" &&
+          /^[ \t]/.test(lines[i]) &&
+          !trimmed.startsWith("```") &&
+          !/^#{1,3}\s/.test(trimmed) &&
+          !trimmed.startsWith("|");
+        if (!continuesItem) break;
+        items[items.length - 1] += ` ${trimmed}`;
         i += 1;
       }
       const Tag = ordered ? "ol" : "ul";

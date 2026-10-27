@@ -22,9 +22,16 @@ export default function LandingFilm() {
     gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+    // ?jump=N screenshot harness: settle synchronously at the target with
+    // native scroll (no Lenis smoothing) so headless captures are deterministic.
+    const jumpParam = new URLSearchParams(window.location.search).get("jump");
+    const jumpTo = jumpParam === null ? null : Number(jumpParam);
+    const jumpMode = jumpTo !== null && !Number.isNaN(jumpTo);
+    if (jumpMode) window.scrollTo(0, jumpTo);
+
     let lenis: Lenis | null = null;
     const tick = (time: number) => lenis?.raf(time * 1000);
-    if (!reduced) {
+    if (!reduced && !jumpMode) {
       lenis = new Lenis({ lerp: 0.09 });
       lenis.on("scroll", ScrollTrigger.update);
       gsap.ticker.add(tick);
@@ -37,23 +44,33 @@ export default function LandingFilm() {
       document.querySelectorAll("[data-split]").forEach((el) => {
         const text = el.textContent ?? "";
         el.textContent = "";
-        for (const ch of text) {
-          const span = document.createElement("span");
-          span.className = "inline-block will-change-transform";
-          span.textContent = ch === " " ? "\u00A0" : ch;
-          el.appendChild(span);
+        // Word wrappers keep line-breaking between words (never mid-word);
+        // only the inner char spans animate.
+        for (const word of text.split(" ")) {
+          const w = document.createElement("span");
+          w.className = "split-word inline-block whitespace-nowrap";
+          for (const ch of word) {
+            const span = document.createElement("span");
+            span.className = "split-ch inline-block will-change-transform";
+            span.textContent = ch;
+            w.appendChild(span);
+          }
+          el.appendChild(w);
+          el.appendChild(document.createTextNode(" "));
         }
       });
-      gsap.from("[data-split] span", {
-        yPercent: 110,
-        opacity: 0,
-        rotate: 4,
-        duration: 0.9,
-        ease: "power3.out",
-        stagger: 0.018,
-        delay: 0.15,
-      });
-      gsap.from("[data-hero-fade]", { y: 24, opacity: 0, duration: 1, ease: "power2.out", stagger: 0.12, delay: 0.5 });
+      if (!jumpMode) {
+        gsap.from("[data-split] .split-ch", {
+          yPercent: 110,
+          opacity: 0,
+          rotate: 4,
+          duration: 0.9,
+          ease: "power3.out",
+          stagger: 0.018,
+          delay: 0.15,
+        });
+        gsap.from("[data-hero-fade]", { y: 24, opacity: 0, duration: 1, ease: "power2.out", stagger: 0.12, delay: 0.5 });
+      }
 
       // Pinned scenes first (ordering law), ambient after.
       gsap.set("[data-hero-bg]", { scale: 1.25 });
@@ -144,10 +161,12 @@ export default function LandingFilm() {
       });
     }, root);
 
-    const jump = new URLSearchParams(window.location.search).get("jump");
-    if (jump !== null && !Number.isNaN(Number(jump))) {
-      requestAnimationFrame(() => {
-        window.scrollTo(0, Number(jump));
+    if (jumpMode && jumpTo !== null) {
+      window.scrollTo(0, jumpTo);
+      ScrollTrigger.refresh();
+      // Late font/image layout shifts move trigger positions; re-measure once settled.
+      document.fonts?.ready.then(() => {
+        window.scrollTo(0, jumpTo);
         ScrollTrigger.refresh();
       });
     }
