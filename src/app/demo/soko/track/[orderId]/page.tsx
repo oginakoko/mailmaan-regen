@@ -7,6 +7,7 @@ import {
   callDemoMailmaan,
   demoTrackingUrl,
   type DemoOrder,
+  type DemoStage,
 } from "@/lib/demo/soko";
 import Tracker from "./tracker";
 
@@ -86,7 +87,7 @@ async function TrackOrderContent({
 }) {
   const { orderId } = await params;
   const query = await searchParams;
-  let initial: { order: DemoOrder; stages: Array<{ key: string; label: string; event: string; dueSeconds: number; fired: boolean }>; error?: string };
+  let initial: { order: DemoOrder; stages: DemoStage[]; error?: string };
   try {
     initial = await advanceDemoOrder(orderId);
   } catch {
