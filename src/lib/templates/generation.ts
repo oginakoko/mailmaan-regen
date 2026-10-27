@@ -92,7 +92,11 @@ function extractJson(text: string): unknown {
   return JSON.parse(text.slice(start, end + 1));
 }
 
-async function callMuse(input: GenerationInput, repairNote?: string): Promise<GeneratedTemplate> {
+async function callMuse(
+  input: GenerationInput,
+  repairNote?: string,
+  maxTokens = 8000,
+): Promise<GeneratedTemplate> {
   const env = getServerEnv();
   const baseUrl = (env.AI_BASE_URL ?? "https://api.meta.ai/v1").replace(/\/$/, "");
   const path = env.AI_MODELS_PATH ?? "/chat/completions";
@@ -111,7 +115,8 @@ async function callMuse(input: GenerationInput, repairNote?: string): Promise<Ge
     body: JSON.stringify({
       model,
       temperature: 0.4,
-      max_tokens: 4000,
+      max_tokens: maxTokens,
+      response_format: { type: "json_object" },
       messages: [
         { role: "system", content: "You generate transactional email templates as strict JSON." },
         { role: "user", content: prompt },
@@ -125,12 +130,26 @@ async function callMuse(input: GenerationInput, repairNote?: string): Promise<Ge
     throw new Error(`Muse API error (${response.status}): ${detail}`);
   }
   const payload = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
+    choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
   };
-  const content = payload.choices?.[0]?.message?.content;
+  const choice = payload.choices?.[0];
+  const content = choice?.message?.content;
   if (!content) throw new Error("Muse API returned no message content.");
+  if (choice?.finish_reason === "length" && maxTokens < 16000) {
+    // Truncated mid-JSON: retry once with a bigger budget instead of
+    // handing a cut-off string to the repair loop.
+    return callMuse(input, repairNote, 16000);
+  }
 
-  const parsed = modelOutputSchema.safeParse(extractJson(content));
+  let extracted: unknown;
+  try {
+    extracted = extractJson(content);
+  } catch {
+    throw new Error(
+      "The AI returned text that was not valid JSON. This is usually a truncated reply — try generating again.",
+    );
+  }
+  const parsed = modelOutputSchema.safeParse(extracted);
   if (!parsed.success) {
     throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
   }
