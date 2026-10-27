@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiKeyAuthError, authenticateApiKey, requireScope } from "@/lib/api-keys/service";
+import { enforceRateLimit } from "@/lib/rate-limit/service";
 import { MessageSyncError, syncMessageFromUpstream } from "@/lib/email/status-sync";
 
 /**
@@ -19,6 +20,8 @@ export async function POST(
   try {
     const auth = await authenticateApiKey(rawKey);
     requireScope(auth, "read");
+    const limited = await enforceRateLimit(rawKey ?? "", "write", requestId);
+    if (limited) return limited;
     const { id } = await context.params;
     const result = await syncMessageFromUpstream(auth.project.id, id);
     return NextResponse.json({

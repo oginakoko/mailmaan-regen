@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiKeyAuthError, authenticateApiKey, requireScope } from "@/lib/api-keys/service";
+import { enforceRateLimit } from "@/lib/rate-limit/service";
 import { EmailSendError, queueEmailSend } from "@/lib/email/send";
 
 /**
@@ -18,6 +19,8 @@ export async function POST(request: Request) {
   try {
     const auth = await authenticateApiKey(rawKey);
     requireScope(auth, "send");
+    const limited = await enforceRateLimit(rawKey ?? "", "write", requestId);
+    if (limited) return limited;
 
     let body: unknown;
     try {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiKeyAuthError, authenticateApiKey, requireScope } from "@/lib/api-keys/service";
+import { enforceRateLimit } from "@/lib/rate-limit/service";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
@@ -19,6 +20,8 @@ export async function GET(
   try {
     const auth = await authenticateApiKey(rawKey);
     requireScope(auth, "read");
+    const limited = await enforceRateLimit(rawKey ?? "", "read", requestId);
+    if (limited) return limited;
     const { id } = await context.params;
 
     const db = createSupabaseServiceClient();

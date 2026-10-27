@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiKeyAuthError, authenticateApiKey, requireScope } from "@/lib/api-keys/service";
+import { enforceRateLimit } from "@/lib/rate-limit/service";
 import { reconcileProject, WorkflowError } from "@/lib/workflows/service";
 
 /**
@@ -15,6 +16,8 @@ export async function POST(request: Request) {
   try {
     const auth = await authenticateApiKey(rawKey);
     requireScope(auth, "events");
+    const limited = await enforceRateLimit(rawKey ?? "", "write", requestId);
+    if (limited) return limited;
     const result = await reconcileProject(auth.project.id);
     return NextResponse.json(result);
   } catch (error) {

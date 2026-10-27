@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiKeyAuthError, authenticateApiKey, requireScope } from "@/lib/api-keys/service";
+import { enforceRateLimit } from "@/lib/rate-limit/service";
 import { TemplateService } from "@/lib/templates/service";
 
 /**
@@ -10,10 +11,13 @@ import { TemplateService } from "@/lib/templates/service";
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization") ?? "";
   const rawKey = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length).trim() : null;
+  const requestId = crypto.randomUUID();
 
   try {
     const auth = await authenticateApiKey(rawKey);
     requireScope(auth, "read");
+    const limited = await enforceRateLimit(rawKey ?? "", "read", requestId);
+    if (limited) return limited;
     const templates = await new TemplateService().listPublished(auth.project.id);
     return NextResponse.json({
       templates: templates.map((t) => ({
@@ -28,7 +32,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     if (error instanceof ApiKeyAuthError) {
-      const requestId = crypto.randomUUID();
       console.error("[templates] GET failed", {
         code: error.code,
         request_id: requestId,
@@ -39,7 +42,6 @@ export async function GET(request: Request) {
         { status: 401 },
       );
     }
-    const requestId = crypto.randomUUID();
     console.error("[templates] GET failed", {
       code: "internal_error",
       request_id: requestId,
