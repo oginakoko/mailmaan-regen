@@ -107,6 +107,32 @@ describe("MailmaanDeliveryProvider", () => {
     expect((failure as ProviderSendError).code).toBe("delivery_rejected");
   });
 
+  it("reads upstream status and returns null on 404", async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (String(url).includes(encodeURIComponent("<known@mail>"))) {
+        return jsonResponse(200, {
+          status: "sent",
+          delivered_at: "2026-10-27T10:05:21.355073+00:00",
+          opened_at: null,
+          clicked_at: null,
+        });
+      }
+      return jsonResponse(404, { error: "Message not found" });
+    });
+    const provider = new MailmaanDeliveryProvider({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    expect(await provider.getMessageStatus("<known@mail>")).toEqual({
+      status: "sent",
+      deliveredAt: "2026-10-27T10:05:21.355073+00:00",
+      openedAt: null,
+      clickedAt: null,
+    });
+    expect(await provider.getMessageStatus("<missing@mail>")).toBeNull();
+    const [url] = fetchImpl.mock.calls[0] as unknown as [string];
+    expect(url).toBe("https://delivery.example/v1/messages/%3Cknown%40mail%3E/status");
+  });
+
   it("aborts on timeout and marks the failure retryable", async () => {
     const fetchImpl = vi.fn(
       (_url: string, init?: RequestInit) =>

@@ -113,6 +113,13 @@ export function mapMailmaanError(status: number, payload: unknown): ProviderSend
   return new ProviderSendError("delivery_failed", message, { upstreamStatus: status });
 }
 
+export interface UpstreamStatus {
+  status: string;
+  deliveredAt: string | null;
+  openedAt: string | null;
+  clickedAt: string | null;
+}
+
 export type FetchImpl = typeof fetch;
 
 export class MailmaanDeliveryProvider {
@@ -173,6 +180,55 @@ export class MailmaanDeliveryProvider {
     return {
       providerMessageId,
       status: typeof record.status === "string" ? record.status : "sent",
+    };
+  }
+
+  /**
+   * Reads upstream status for a provider message id. Returns null when the
+   * provider has no record (e.g. sends from before status recording
+   * existed) — callers must treat that as "unknown", never as a state.
+   */
+  async getMessageStatus(providerMessageId: string): Promise<UpstreamStatus | null> {
+    const { baseUrl, apiKey } = getDeliveryConfig();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    let response: Response;
+    try {
+      response = await this.fetchImpl(
+        `${baseUrl}/v1/messages/${encodeURIComponent(providerMessageId)}/status`,
+        {
+          method: "GET",
+          headers: {
+            authorization: `Bearer ${apiKey}`,
+            "user-agent": "mailmaan-regen/0.1.0",
+          },
+          signal: controller.signal,
+        },
+      );
+    } catch (error) {
+      throw new ProviderSendError(
+        "delivery_timeout",
+        error instanceof Error && error.name === "AbortError"
+          ? `Delivery status timed out after ${this.timeoutMs}ms.`
+          : `Delivery status request failed: ${error instanceof Error ? error.message : String(error)}`,
+        { retryable: true },
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+    if (response.status === 404) return null;
+    const payload: unknown = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw mapMailmaanError(response.status, payload);
+    }
+    const record = (payload ?? {}) as Record<string, unknown>;
+    const asStringOrNull = (value: unknown): string | null =>
+      typeof value === "string" ? value : null;
+    return {
+      status: typeof record.status === "string" ? record.status : "unknown",
+      deliveredAt: asStringOrNull(record.delivered_at),
+      openedAt: asStringOrNull(record.opened_at),
+      clickedAt: asStringOrNull(record.clicked_at),
     };
   }
 }
