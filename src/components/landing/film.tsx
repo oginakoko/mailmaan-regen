@@ -455,7 +455,12 @@ export default function LandingFilm() {
 
           <footer className="mt-20 flex flex-col gap-3 border-t border-[#1c1917]/15 pt-6 text-sm text-[#1c1917]/60 sm:flex-row sm:items-center sm:justify-between">
             <p className="font-display text-lg text-[#1c1917]">Mailmaan</p>
-            <p>Email runtime for AI-built applications · built for the hackathon, honest by design.</p>
+            <p className="sm:text-center">Email runtime for AI-built applications · built for the hackathon, honest by design.</p>
+            <nav className="flex flex-wrap gap-x-5 gap-y-1 font-medium" aria-label="Footer">
+              <Link href="/about" className="hover:text-[#1c1917]">About</Link>
+              <Link href="/docs" className="hover:text-[#1c1917]">Docs</Link>
+              <Link href="/dashboard" className="hover:text-[#1c1917]">Dashboard</Link>
+            </nav>
           </footer>
         </div>
       </div>
