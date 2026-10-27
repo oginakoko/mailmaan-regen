@@ -1,5 +1,6 @@
-import { Suspense } from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 async function signIn(formData: FormData) {
@@ -37,9 +38,12 @@ async function LoginContent({
   const next = params.next ?? "/dashboard";
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-24">
+    <main className="flex flex-1 flex-col items-center justify-center px-6 py-24 font-body">
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-2 text-center">
+          <Link href="/" className="font-display text-xl tracking-tight text-zinc-900 dark:text-zinc-50">
+            Mailmaan
+          </Link>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             Sign in to Mailmaan
           </h1>
