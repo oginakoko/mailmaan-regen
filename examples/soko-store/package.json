@@ -6,7 +6,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "demo": "../../node_modules/.bin/esbuild ./src/run-demo.ts --bundle --platform=node --format=esm --outfile=./node_modules/.demo/run-demo.mjs --log-level=warning && node ./node_modules/.demo/run-demo.mjs"
+    "demo": "../../node_modules/.bin/esbuild ./src/run-demo.ts --bundle --platform=node --format=esm --outfile=./node_modules/.demo/run-demo.mjs --log-level=warning && node ./node_modules/.demo/run-demo.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "mailmaan-sdk": "file:../../packages/sdk"

@@ -6,5 +6,6 @@ export default defineConfig({
   platform: "node",
   target: "node20",
   clean: true,
+  dts: true,
   banner: { js: "#!/usr/bin/env node" },
 });

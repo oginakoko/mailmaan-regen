@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "typecheck:packages": "npm run build --prefix packages/sdk && npm run build --prefix packages/mcp-server && npm run typecheck --prefix examples/soko-store",
     "test": "vitest run"
   },
   "dependencies": {
