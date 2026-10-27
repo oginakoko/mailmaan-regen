@@ -89,10 +89,12 @@ async function generateAction(formData: FormData) {
   const projectId = String(formData.get("projectId") ?? "");
   const project = await requireOwnedProject(projectId);
   const purpose = String(formData.get("purpose") ?? "welcome");
+  const brief = String(formData.get("brief") ?? "").trim().slice(0, 500);
   try {
     const generated = await generateTemplate(projectId, {
       brand: brandFromProject(project),
       purpose: purpose as TemplateRecord["purpose"],
+      ...(brief ? { brief } : {}),
     });
     const { generatedBy, model, notes, ...draft } = generated;
     await new TemplateService().createDraft(projectId, draft, {
@@ -319,6 +321,15 @@ async function ProjectTemplatesContent({
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
+          </label>
+          <label className="min-w-52 flex-1 space-y-1 text-sm">
+            <span className="font-medium">Brief for the AI (optional)</span>
+            <input
+              name="brief"
+              placeholder="e.g. thank the buyer and ask for a review"
+              maxLength={500}
+              className="block w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            />
           </label>
           <button type="submit" className="rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300">
             Generate draft

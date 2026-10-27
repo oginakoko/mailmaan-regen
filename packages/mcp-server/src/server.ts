@@ -89,11 +89,17 @@ export function createMailmaanServer(client: MailmaanClient): McpServer {
         "Generate one template draft from the project brand for an email purpose (welcome, receipt, ...). Saved as a DRAFT for human review — publishing happens in the dashboard. Generate once per email type, then reuse the published slug for every user.",
       inputSchema: {
         purpose: z.string().describe("Template purpose, e.g. welcome, password_reset, receipt, notification, custom."),
+        brief: z.string().max(500).optional().describe("Free-text author brief, e.g. 'thank the buyer and ask for a review'."),
       },
     },
     async (input) => {
       try {
-        return textResult(await handleGenerateTemplate(client, { purpose: input.purpose }));
+        return textResult(
+          await handleGenerateTemplate(client, {
+            purpose: input.purpose,
+            ...(input.brief ? { brief: input.brief } : {}),
+          }),
+        );
       } catch (error) {
         return errorResult(error);
       }

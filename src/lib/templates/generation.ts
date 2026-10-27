@@ -37,6 +37,8 @@ export interface GenerationInput {
   purpose: TemplateDraft["purpose"];
   requiredVariables?: string[];
   sampleValues?: Record<string, string>;
+  /** Free-text author brief, e.g. "thank the buyer and ask for a review". */
+  brief?: string;
 }
 
 export interface GeneratedTemplate extends TemplateDraft {
@@ -71,6 +73,7 @@ function buildPrompt(input: GenerationInput): string {
     brand.logoUrl ? `Logo URL: ${brand.logoUrl}` : "No logo.",
     brand.supportEmail ? `Support email: ${brand.supportEmail}` : "",
     `Purpose: ${purpose}.`,
+    input.brief?.trim() ? `Author brief: ${input.brief.trim().slice(0, 500)}` : "",
     input.requiredVariables?.length
       ? `The template MUST use these variables: ${input.requiredVariables.join(", ")}.`
       : "Choose sensible variables for this purpose.",

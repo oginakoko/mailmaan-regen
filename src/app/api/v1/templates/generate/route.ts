@@ -36,13 +36,27 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const purpose = (body as Record<string, unknown> | null)?.purpose;
+    const record = (body as Record<string, unknown> | null) ?? {};
+    const purpose = record.purpose;
     if (typeof purpose !== "string" || !(TEMPLATE_PURPOSES as readonly string[]).includes(purpose)) {
       return NextResponse.json(
         {
           error: {
             code: "invalid_purpose",
             message: `Purpose must be one of: ${TEMPLATE_PURPOSES.join(", ")}.`,
+            request_id: requestId,
+          },
+        },
+        { status: 422 },
+      );
+    }
+    const brief = typeof record.brief === "string" ? record.brief.slice(0, 500) : undefined;
+    if (record.brief !== undefined && typeof record.brief !== "string") {
+      return NextResponse.json(
+        {
+          error: {
+            code: "invalid_brief",
+            message: "Brief must be a string of at most 500 characters.",
             request_id: requestId,
           },
         },
@@ -79,6 +93,7 @@ export async function POST(request: Request) {
     const { generatedBy, model, notes, ...draft } = await generateTemplate(auth.project.id, {
       brand,
       purpose: purpose as (typeof TEMPLATE_PURPOSES)[number],
+      ...(brief ? { brief } : {}),
     });
     const generated = await new TemplateService().createDraft(auth.project.id, draft, {
       generated_by: generatedBy,

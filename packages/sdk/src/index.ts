@@ -191,8 +191,8 @@ export class MailmaanClient {
     return this.request("GET", "/v1/templates");
   }
 
-  async generateTemplate(purpose: string): Promise<GeneratedTemplateDraft> {
-    return this.request("POST", "/v1/templates/generate", { purpose });
+  async generateTemplate(purpose: string, brief?: string): Promise<GeneratedTemplateDraft> {
+    return this.request("POST", "/v1/templates/generate", brief ? { purpose, brief } : { purpose });
   }
 
   async sendEmail(input: SendEmailInput): Promise<SentEmail> {
