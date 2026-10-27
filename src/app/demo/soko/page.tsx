@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { fireDemoStageEvent, type DemoOrder } from "@/lib/demo/soko";
@@ -51,11 +52,7 @@ async function checkoutAction(formData: FormData): Promise<void> {
   redirect(`/demo/soko/track/${created.id}`);
 }
 
-export default async function SokoStorePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
+async function SokoStoreContent({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const query = await searchParams;
   return (
     <main className="min-h-screen bg-[#f4f4f0] text-stone-900">
@@ -141,5 +138,25 @@ export default async function SokoStorePage({
         </section>
       </div>
     </main>
+  );
+}
+
+export default function SokoStorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#f4f4f0] text-stone-900">
+          <div className="mx-auto w-full max-w-5xl px-6 py-10">
+            <p className="text-sm text-stone-500">Loading Soko…</p>
+          </div>
+        </main>
+      }
+    >
+      <SokoStoreContent searchParams={searchParams} />
+    </Suspense>
   );
 }

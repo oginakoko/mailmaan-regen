@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { TemplateService } from "@/lib/templates/service";
@@ -71,7 +72,7 @@ async function sendAiAction(formData: FormData): Promise<void> {
   back("?aiSent=1");
 }
 
-export default async function TrackOrderPage({
+async function TrackOrderContent({
   params,
   searchParams,
 }: {
@@ -210,5 +211,27 @@ export default async function TrackOrderPage({
         </section>
       </div>
     </main>
+  );
+}
+
+export default function TrackOrderPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ orderId: string }>;
+  searchParams: Promise<{ ai?: string; aiError?: string; aiSent?: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#f4f4f0] text-stone-900">
+          <div className="mx-auto w-full max-w-3xl px-6 py-10">
+            <p className="text-sm text-stone-500">Loading your order…</p>
+          </div>
+        </main>
+      }
+    >
+      <TrackOrderContent params={params} searchParams={searchParams} />
+    </Suspense>
   );
 }
