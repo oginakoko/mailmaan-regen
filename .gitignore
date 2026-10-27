@@ -42,3 +42,4 @@ next-env.d.ts
 
 # build output
 packages/*/dist
+examples/*/node_modules/

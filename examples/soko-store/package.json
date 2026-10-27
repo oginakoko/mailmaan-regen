@@ -1,0 +1,15 @@
+{
+  "name": "soko-store",
+  "version": "0.1.0",
+  "description": "Example store using the Mailmaan SDK from server-side code.",
+  "type": "module",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "demo": "node ./src/run-demo.ts",
+    "demo:ts": "vite-node ./src/run-demo.ts"
+  },
+  "dependencies": {
+    "mailmaan-sdk": "file:../../packages/sdk"
+  }
+}
