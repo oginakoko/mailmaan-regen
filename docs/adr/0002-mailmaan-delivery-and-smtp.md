@@ -100,11 +100,19 @@ Therefore, before any production send:
   is the API key. Mitigations to consider in the old service: per-key
   rate limits on `/v1/send`, and audit logging of host/port (never
   credentials) per send.
-- **`smtp.secure` coercion.** The merged code uses `Boolean(...)`, so a
-  JSON string `"false"` would become `true`. This app always sends a real
-  boolean; a strict-validation fix has been requested from the
-  old-service agent (follow-up instruction, not blocking).
-- **Old-repo suite health.** The old repo's full Vitest suite reports
-  27 failures; they were not baselined against pre-merge `main`.
-  Focused transactional tests (6/6) and typecheck pass. Baselining
-  requested from the old-service agent.
+- **`smtp.secure` coercion.** Fixed by the old-service agent:
+  non-booleans (including `"false"` and `0`) are now rejected with 422
+  and covered by tests. This app always sends a real boolean.
+- **Old-repo suite health.** Baselined: pre-PR-112 `82ee620` has the
+  same 27 failing test cases (identical names) as the current tree —
+  all pre-existing, none caused by the delivery extension. Focused
+  transactional tests pass 9/9; typecheck passes.
+- **Status recording (fixed).** The old service never persisted
+  `/v1/send` tracking rows: production has no `sent_emails` table (the
+  real table is `master_sent_emails`) and `email_sends` has no
+  `user_id` column. Fixed in old-service PRs #113 (`8ddd64d`) and #114
+  (`64c2b24`), both merged and live-verified. Sends before the fix
+  (including our Day-4 `day4-live-1/2` attempts) have no tracking rows
+  and can never resolve via status lookup — a gap in old-service
+  history, not in our timeline, which recorded every state honestly
+  from send responses.

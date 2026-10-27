@@ -62,10 +62,11 @@
   Turbopack worker port-binding; pre-existing environmental issue).
 - Live probes: old-service 422/400 validation (new code confirmed on prod),
   preview `POST /v1/emails` 202 + timeline + replay as above.
-- Old-service note: `GET /v1/messages/<id>/status` returns 404 for the
-  raw-HTML send — its `sent_emails` row write/read-back looks broken for the
-  new mode. Follow-up issued to the old-service agent; our accepted state
-  comes from the send response, unaffected.
+- Post-fix verification (old-service PRs #113 + #114 live): fresh send
+  `day4-live-3` → 202 `accepted`,
+  `<c2ea6f9c-a7ff-1597-9148-1386c4defd8f@gaphytoro.com>`; upstream status
+  lookup → 200 `{status: sent, delivered_at}`. Pre-fix sends have no
+  tracking rows (never persisted) — expected gap, our timeline unaffected.
 
 ## Acceptance criteria now satisfied
 - Day 4 proof: one durable message + one real email + idempotent replay —
@@ -75,10 +76,11 @@
 
 ## Remaining risks and blockers
 - Old service is the single point of failure (accepted by owner).
-- Residual risks recorded in ADR-0002: arbitrary SMTP endpoints per key
-  (inherent; rate-limit/audit mitigations suggested), `smtp.secure`
-  Boolean coercion (fix requested), old-repo suite baselining (requested),
-  plus the new status-read-back 404 for raw-HTML sends (requested).
+- All Day-4 follow-ups resolved by the old-service agent: status recording
+  (PRs #113/#114, live-verified above), `smtp.secure` strict validation,
+  full-suite baseline (27 failures pre-existing). One accepted residual
+  risk remains in ADR-0002: arbitrary SMTP endpoints per key (inherent to
+  user-supplied SMTP; rate-limit/audit mitigations suggested, not scheduled).
 - Localhost HTTP testing is environmentally blocked (proxy kills responses
   slower than ~4s); deployed preview is the live-test target until Day 5+.
 
