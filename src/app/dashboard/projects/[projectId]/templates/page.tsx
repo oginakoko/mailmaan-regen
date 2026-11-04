@@ -11,6 +11,7 @@ import {
   type BrandProfile,
 } from "@/lib/templates/generation";
 import { renderTemplate, validateVariableValues, TEMPLATE_PURPOSES } from "@/lib/email/render";
+import { listWorkflows } from "@/lib/workflows/service";
 import { Banner } from "@/components/ui/banner";
 import { SubmitButton } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -143,6 +144,41 @@ async function publishAction(formData: FormData) {
   backTo(projectId, "?published=1");
 }
 
+async function saveTemplateContent(formData: FormData, publish: boolean) {
+  const projectId = String(formData.get("projectId") ?? "");
+  const templateId = String(formData.get("templateId") ?? "");
+  await requireOwnedProject(projectId);
+  try {
+    const { template, declared } = await new TemplateService().saveContent(
+      projectId,
+      templateId,
+      {
+        name: String(formData.get("name") ?? ""),
+        subject: String(formData.get("subject") ?? ""),
+        html: String(formData.get("html") ?? ""),
+        text: String(formData.get("text") ?? ""),
+      },
+      { publish },
+    );
+    const params = new URLSearchParams({ v: String(template.version), slug: template.slug });
+    if (declared.length) params.set("declared", declared.join(","));
+    backTo(projectId, publish ? `?saved=1&${params}` : `?draftSaved=1&${params}`);
+  } catch (error) {
+    const message = error instanceof TemplateError ? error.message : "Template could not be saved.";
+    backTo(projectId, `?error=${encodeURIComponent(message)}`);
+  }
+}
+
+async function saveDraftAction(formData: FormData) {
+  "use server";
+  await saveTemplateContent(formData, false);
+}
+
+async function savePublishAction(formData: FormData) {
+  "use server";
+  await saveTemplateContent(formData, true);
+}
+
 async function archiveAction(formData: FormData) {
   "use server";
   const projectId = String(formData.get("projectId") ?? "");
@@ -256,6 +292,86 @@ function CreateManuallyDialog({ projectId }: { projectId: string }) {
   );
 }
 
+function EditTemplateDialog({
+  projectId,
+  template,
+  workflows,
+}: {
+  projectId: string;
+  template: TemplateRecord;
+  workflows: string[];
+}) {
+  const declared = template.variables_schema.variables;
+  return (
+    <Dialog
+      trigger="Edit"
+      triggerVariant="secondary"
+      triggerSize="sm"
+      title={`Edit — ${template.name}`}
+      description={
+        <>
+          v{template.version} ({template.status}) · slug <code className="font-mono text-[0.9em]">{template.slug}</code>.
+          Save &amp; publish makes the new version live for workflows immediately
+          {template.status !== "draft" ? " (the published version is forked, never rewritten)" : null}.
+        </>
+      }
+      wide
+    >
+      <form action={savePublishAction} className="grid gap-4">
+        <input type="hidden" name="projectId" value={projectId} />
+        <input type="hidden" name="templateId" value={template.id} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextField label="Name" name="name" defaultValue={template.name} autoComplete="off" />
+          <TextField label="Subject" name="subject" required defaultValue={template.subject_template} autoComplete="off" hint="{{variables}} allowed, no line breaks." />
+        </div>
+        <TextAreaField
+          label="HTML template"
+          name="html"
+          required
+          rows={8}
+          mono
+          defaultValue={template.html_template}
+          hint="Sanitized on save; values escaped at render."
+        />
+        <TextAreaField
+          label="Plain-text template"
+          name="text"
+          rows={6}
+          mono
+          defaultValue={template.text_template ?? ""}
+          hint="Update links and wording here. Leave blank to auto-derive from the HTML."
+        />
+        <p className="text-sm leading-6 text-[#1c1917]/65">
+          Variables:{" "}
+          {declared.length ? (
+            <span className="font-mono text-[0.9em]">
+              {declared.map((v) => `${v.name}${v.required ? "*" : ""}`).join(", ")}
+            </span>
+          ) : (
+            "none"
+          )}{" "}
+          (* required). New {"{{placeholders}}"} you add are auto-declared as optional.
+        </p>
+        <p className="text-sm leading-6 text-[#1c1917]/65">
+          {workflows.length ? (
+            <>Used by {workflows.length === 1 ? "workflow" : "workflows"}: <strong>{workflows.join(", ")}</strong> — they send the new version as soon as you save &amp; publish.</>
+          ) : (
+            <>No workflow points at this template yet — publishing still makes it available for sends.</>
+          )}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <SubmitButton pendingLabel="Saving & publishing…">
+            Save &amp; publish
+          </SubmitButton>
+          <SubmitButton variant="secondary" formAction={saveDraftAction} pendingLabel="Saving draft…">
+            Save draft
+          </SubmitButton>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
 function statusPill(status: string): string {
   if (status === "published") return "bg-[#1a7f37]/10 text-[#145f2a]";
   if (status === "archived") return "bg-[#1c1917]/8 text-[#1c1917]/55";
@@ -267,7 +383,18 @@ async function ProjectTemplatesContent({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ error?: string; preview?: string; created?: string; published?: string; archived?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    preview?: string;
+    created?: string;
+    published?: string;
+    archived?: string;
+    saved?: string;
+    draftSaved?: string;
+    v?: string;
+    slug?: string;
+    declared?: string;
+  }>;
 }) {
   const { projectId } = await params;
   const query = await searchParams;
@@ -275,6 +402,17 @@ async function ProjectTemplatesContent({
   const service = new TemplateService();
   const templates = await service.listTemplates(projectId);
   const config = generationConfigured();
+
+  // Workflows pin a template version id but send the latest published
+  // version per slug — map template ids back to slugs for the edit UI.
+  const workflows = await listWorkflows(projectId);
+  const slugByTemplateId = new Map(templates.map((t) => [t.id, t.slug]));
+  const workflowsBySlug = new Map<string, string[]>();
+  for (const workflow of workflows) {
+    if (!workflow.template_id) continue;
+    const slug = slugByTemplateId.get(workflow.template_id);
+    if (slug) workflowsBySlug.set(slug, [...(workflowsBySlug.get(slug) ?? []), workflow.name]);
+  }
 
   // Optional server-side preview (same renderer as the real send path).
   let preview: { template: TemplateRecord; subject: string; html: string; text: string; issues: string[] } | null = null;
@@ -302,8 +440,9 @@ async function ProjectTemplatesContent({
         <div>
           <h2 className="font-display text-2xl font-medium tracking-tight">Templates</h2>
           <p className="mt-1 max-w-xl text-sm leading-6 text-[#1c1917]/65">
-            Drafts are editable. Publishing freezes a version forever; workflows
-            always resolve the latest published version. Nothing here sends email.
+            Edit any version — subject, HTML and plain text. Save &amp; publish
+            freezes a new version that workflows pick up immediately; published
+            versions are forked, never rewritten. Nothing here sends email.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -316,6 +455,18 @@ async function ProjectTemplatesContent({
       {query.created ? <Banner tone="success" title="Draft saved.">Review it below, preview it, then publish.</Banner> : null}
       {query.published ? <Banner tone="success" title="Template published.">Workflows now resolve this version.</Banner> : null}
       {query.archived ? <Banner tone="info" title="Template archived.">It no longer resolves for new sends.</Banner> : null}
+      {query.saved ? (
+        <Banner tone="success" title={`Saved and published as v${query.v ?? "?"} — live now.`}>
+          Workflows using <code className="font-mono text-[0.9em]">{query.slug}</code> send this version from here on.
+          {query.declared ? <> New variables auto-declared (optional): <code className="font-mono text-[0.9em]">{query.declared}</code>.</> : null}
+        </Banner>
+      ) : null}
+      {query.draftSaved ? (
+        <Banner tone="success" title={`Draft v${query.v ?? "?"} saved.`}>
+          Publish it to make it live for workflows.
+          {query.declared ? <> New variables auto-declared (optional): <code className="font-mono text-[0.9em]">{query.declared}</code>.</> : null}
+        </Banner>
+      ) : null}
 
       <Banner tone={config.ai ? "info" : "warn"} title={config.ai ? "AI generation is on." : "AI generation is off."}>
         {config.ai ? (
@@ -386,6 +537,7 @@ async function ProjectTemplatesContent({
                 >
                   Preview
                 </a>
+                <EditTemplateDialog projectId={projectId} template={t} workflows={workflowsBySlug.get(t.slug) ?? []} />
                 {t.status === "draft" ? (
                   <form action={publishAction}>
                     <input type="hidden" name="projectId" value={projectId} />
@@ -436,7 +588,18 @@ export default function ProjectTemplatesPage({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ error?: string; preview?: string; created?: string; published?: string; archived?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    preview?: string;
+    created?: string;
+    published?: string;
+    archived?: string;
+    saved?: string;
+    draftSaved?: string;
+    v?: string;
+    slug?: string;
+    declared?: string;
+  }>;
 }) {
   return (
     <Suspense fallback={<PageSkeleton titleWidth="w-40" cards={0} />}>

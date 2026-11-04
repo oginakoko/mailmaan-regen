@@ -4,6 +4,7 @@ import { createSupabaseServiceClient } from "../supabase/service";
 import {
   sanitizeEmailHtml,
   templateDraftSchema,
+  undeclaredPlaceholders,
   validateSubject,
   type TemplateDraft,
   type TemplatePurpose,
@@ -63,6 +64,21 @@ function assertValidDraft(draft: TemplateDraft): void {
   if (subjectIssues.length) {
     throw new TemplateError("template_invalid", subjectIssues.join("; "));
   }
+}
+
+export interface TemplateContentEdits {
+  name?: string;
+  subject: string;
+  html: string;
+  text?: string;
+}
+
+export interface SavedTemplateContent {
+  template: TemplateRecord;
+  /** True when a published/archived version was forked into a new version. */
+  forked: boolean;
+  /** Placeholder names auto-declared as optional variables. */
+  declared: string[];
 }
 
 export class TemplateService {
@@ -201,6 +217,41 @@ export class TemplateService {
       .single();
     if (error || !data) throw new TemplateError("template_update_failed", error?.message ?? "unknown error");
     return toRecord(data as Record<string, unknown>);
+  }
+
+  /**
+   * Save edited content. Name/purpose/schema carry over; new
+   * `{{placeholders}}` in the edited content are auto-declared as optional
+   * string variables so strict send validation keeps passing. With
+   * `publish`, the saved version is published immediately, so workflows —
+   * which resolve the latest published version per slug — pick it up.
+   */
+  async saveContent(
+    projectId: string,
+    templateId: string,
+    edits: TemplateContentEdits,
+    opts?: { publish?: boolean },
+  ): Promise<SavedTemplateContent> {
+    const current = await this.getTemplate(projectId, templateId);
+    if (!current) throw new TemplateError("template_not_found", "Template not found in this project.");
+    const declared = undeclaredPlaceholders(
+      [edits.subject, edits.html, edits.text ?? ""],
+      current.variables_schema,
+    );
+    const saved = await this.updateTemplate(projectId, templateId, {
+      name: edits.name?.trim() ? edits.name.trim() : current.name,
+      purpose: current.purpose,
+      subject: edits.subject,
+      html: edits.html,
+      text: edits.text ?? undefined,
+      variables: [
+        ...current.variables_schema.variables,
+        ...declared.map((name) => ({ name, type: "string", required: false })),
+      ],
+      previewData: (current.generation_metadata.preview_data ?? {}) as Record<string, unknown>,
+    });
+    const template = opts?.publish ? await this.publishTemplate(projectId, saved.id) : saved;
+    return { template, forked: saved.id !== templateId, declared };
   }
 
   /** Publish a draft. Immutable afterwards; older published versions stay superseded by version order. */
