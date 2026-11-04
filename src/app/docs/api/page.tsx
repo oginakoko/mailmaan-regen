@@ -42,7 +42,7 @@ const ENDPOINTS: Endpoint[] = [
     scope: "templates",
     summary: "Generate one template draft from the project brand. Draft only — publishing is human, in the dashboard.",
     request: `{ "purpose": "welcome", "brief": "…", "required_variables": ["firstName"] }`,
-    statuses: "201 · 401 · 422 · 429 · 502",
+    statuses: "201 · 400 · 401 · 422 · 429 · 502",
   },
   {
     method: "POST",
@@ -50,7 +50,7 @@ const ENDPOINTS: Endpoint[] = [
     scope: "send",
     summary: "Render a published template and queue one email.",
     request: `{ "to": "ada@example.com", "template": "welcome", "variables": { "firstName": "Ada" } }\nIdempotency-Key: welcome/ada-1`,
-    statuses: "202 · 401 · 404 · 409 · 422 · 429",
+    statuses: "202 · 400 · 401 · 404 · 422 · 429",
   },
   {
     method: "GET",
@@ -72,7 +72,7 @@ const ENDPOINTS: Endpoint[] = [
     scope: "events",
     summary: "Fire an app event; matching workflows run inline and return their runs.",
     request: `{ "id": "order/123", "name": "order.paid", "data": { "customerEmail": "…", "orderId": "123" } }`,
-    statuses: "202 · 401 · 409 · 422 · 429",
+    statuses: "202 · 400 · 401 · 413 · 422 · 429",
   },
   {
     method: "POST",
@@ -99,7 +99,8 @@ export default function ApiReferencePage() {
       <p className="my-4 leading-8 text-[#1c1917]/85">
         <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">read</code> (implied by{" "}
         <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">send</code> and{" "}
-        <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">events</code>),{" "}
+        <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">events</code> only —{" "}
+        <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">templates</code> does not imply it),{" "}
         <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">send</code>,{" "}
         <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">events</code>,{" "}
         <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">templates</code>.
@@ -108,10 +109,14 @@ export default function ApiReferencePage() {
 
       <h2 className="mt-12 font-display text-2xl font-medium sm:text-3xl">Idempotency</h2>
       <p className="my-4 leading-8 text-[#1c1917]/85">
-        Sends take <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">Idempotency-Key</code>;
+        Sends take <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">Idempotency-Key</code> (required);
         events take a stable <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">id</code>.
-        Same key + same body replays the same record; same key + different body is rejected (409).
-        Failed sends replay as failures — retries need a fresh key.
+        Same key + same body replays the same record; same key + different body is rejected
+        (422 <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">idempotency_key_reused</code>).
+        Failed sends replay as failures — retries need a fresh key. Events differ: replaying an{" "}
+        <code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">id</code> returns the first record
+        (<code className="rounded bg-[#1c1917]/8 px-1.5 py-0.5 font-mono text-[0.85em]">replayed: true</code>) and ignores
+        the new body — never a rejection. Malformed JSON is 400 on every POST.
       </p>
 
       <h2 className="mt-12 font-display text-2xl font-medium sm:text-3xl">Endpoints</h2>
