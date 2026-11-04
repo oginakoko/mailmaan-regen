@@ -18,7 +18,8 @@ then read [why it exists](https://mailmaan-regen.vercel.app/about) and the
 
 - **AI drafts templates once** from a brand profile + one-line brief; a human
   publishes; every send reuses the frozen version. Per-user uniqueness comes
-  from event data, never per-send generation.
+  from event data, never per-send generation. Edit in the dashboard anytime —
+  saving republishes and workflows pick the new version up immediately.
 - **Events drive workflows**: your app posts `{name, data}`; workflows match
   triggers, fill variables, and send through the project's own mailbox.
 - **Delivery is managed** through the deployed Mailmaan service with
