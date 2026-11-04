@@ -24,7 +24,8 @@ Base URL: `https://mailmaan-regen.vercel.app`. Dashboard: same host,
    never shared). Sends are blocked until this is set.
 3. Templates → Generate draft (AI when configured, labelled fallback
    otherwise) or write one → review → **Publish**. Note the slug and
-   its required variables.
+   its required variables. Edit anytime later — Save & publish
+   releases a new version that workflows pick up immediately.
 4. Workflows → new workflow: trigger event name, recipient path
    (e.g. `data.email`), variable mappings (e.g.
    `{"firstName": {"path": "data.firstName"}}` or
