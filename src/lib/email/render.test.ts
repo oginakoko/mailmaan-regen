@@ -3,8 +3,10 @@ import {
   extractPlaceholders,
   renderTemplate,
   sanitizeEmailHtml,
+  undeclaredPlaceholders,
   validateSubject,
   validateVariableValues,
+  type VariablesSchema,
 } from "./render";
 
 describe("renderTemplate safety (Blueprint §10, §17)", () => {
@@ -101,5 +103,35 @@ describe("validateVariableValues (Blueprint §10, §15)", () => {
       hacker: "<script>",
     });
     expect(issues).toContain("unknown variable supplied: hacker");
+  });
+});
+
+describe("undeclaredPlaceholders", () => {
+  const schema: VariablesSchema = {
+    variables: [
+      { name: "firstName", type: "string", required: true },
+      { name: "orderId", type: "string", required: false },
+    ],
+  };
+
+  it("returns an empty list when every placeholder is declared", () => {
+    expect(
+      undeclaredPlaceholders(["Hi {{firstName}}", "Order {{orderId}}", ""], schema),
+    ).toEqual([]);
+  });
+
+  it("reports new placeholders across subject, html and text bodies", () => {
+    expect(
+      undeclaredPlaceholders(
+        ["Hi {{firstName}}", '<a href="{{trackingUrl}}">track</a>', "Quote: {{quote}}"],
+        schema,
+      ),
+    ).toEqual(["trackingUrl", "quote"]);
+  });
+
+  it("dedupes repeated placeholders and ignores declared ones", () => {
+    expect(
+      undeclaredPlaceholders(["{{link}} and {{link}}", "{{firstName}} {{link}}", ""], schema),
+    ).toEqual(["link"]);
   });
 });

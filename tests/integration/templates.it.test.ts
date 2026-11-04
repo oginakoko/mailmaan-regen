@@ -155,4 +155,63 @@ describe.skipIf(!hasServiceKey)("TemplateService integration (real Supabase)", (
     },
     60_000,
   );
+
+  it(
+    "saveContent edits in place, auto-declares placeholders, and publishes live",
+    async () => {
+      const service = new TemplateService(createSupabaseServiceClient());
+      const probeSlug = `editor-probe-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+      const generated = fallbackWelcome(soko);
+      const { generatedBy, model, notes, ...draft } = generated;
+
+      const created = await service.createDraft(
+        TEST_PROJECT_ID,
+        { ...draft, slug: probeSlug },
+        { generated_by: generatedBy, model, notes, integration_probe: true },
+      );
+
+      // Draft edits apply in place (no fork) and stay unpublished.
+      const savedDraft = await service.saveContent(TEST_PROJECT_ID, created.id, {
+        subject: "Edited subject, {{firstName}}",
+        html: created.html_template,
+        text: "Plain hello {{firstName}}",
+      });
+      expect(savedDraft.forked).toBe(false);
+      expect(savedDraft.template.id).toBe(created.id);
+      expect(savedDraft.template.status).toBe("draft");
+      expect(savedDraft.template.subject_template).toBe("Edited subject, {{firstName}}");
+      expect(await service.getPublishedBySlug(TEST_PROJECT_ID, probeSlug)).toBeNull();
+
+      // Publish, then save-with-publish from the published version: forks a
+      // new version that immediately becomes the resolved live version.
+      const published = await service.publishTemplate(TEST_PROJECT_ID, created.id);
+      const savedLive = await service.saveContent(
+        TEST_PROJECT_ID,
+        published.id,
+        {
+          subject: published.subject_template,
+          html: published.html_template,
+          text: "Track it here: {{trackingUrl}}",
+        },
+        { publish: true },
+      );
+      expect(savedLive.forked).toBe(true);
+      expect(savedLive.template.status).toBe("published");
+      expect(savedLive.template.version).toBe(published.version + 1);
+      expect(savedLive.declared).toEqual(["trackingUrl"]);
+      expect(
+        savedLive.template.variables_schema.variables.find((v) => v.name === "trackingUrl"),
+      ).toMatchObject({ type: "string", required: false });
+
+      const resolved = await service.getPublishedBySlug(TEST_PROJECT_ID, probeSlug);
+      expect(resolved?.id).toBe(savedLive.template.id);
+      expect(resolved?.text_template).toBe("Track it here: {{trackingUrl}}");
+
+      // Cleanup: archive every probe version.
+      await service.archiveTemplate(TEST_PROJECT_ID, savedLive.template.id);
+      await service.archiveTemplate(TEST_PROJECT_ID, published.id);
+      expect(await service.getPublishedBySlug(TEST_PROJECT_ID, probeSlug)).toBeNull();
+    },
+    60_000,
+  );
 });

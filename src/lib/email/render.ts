@@ -71,6 +71,22 @@ export function extractPlaceholders(body: string): string[] {
   return [...names];
 }
 
+/**
+ * Placeholder names used in content but missing from the schema. The
+ * template editor auto-declares these as optional strings so edited
+ * content never silently renders blank or trips strict send validation.
+ */
+export function undeclaredPlaceholders(bodies: string[], schema: VariablesSchema): string[] {
+  const declared = new Set(schema.variables.map((v) => v.name));
+  const fresh = new Set<string>();
+  for (const body of bodies) {
+    for (const name of extractPlaceholders(body)) {
+      if (!declared.has(name)) fresh.add(name);
+    }
+  }
+  return [...fresh];
+}
+
 export function validateSubject(subject: string): string[] {
   const issues: string[] = [];
   if (/[\r\n]/.test(subject)) issues.push("subject must not contain line breaks (CR/LF injection)");
