@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { fireDemoStageEvent, type DemoOrder } from "@/lib/demo/soko";
+import { PendingButton } from "./pending-button";
 
 const PRODUCT = {
   name: "Soko Coffee AA",
@@ -129,12 +130,16 @@ async function SokoStoreContent({ searchParams }: { searchParams: Promise<{ erro
                   className="w-full rounded-md border border-stone-300 px-3 py-2"
                 />
               </label>
-              <button
-                type="submit"
-                className="w-full rounded-md bg-stone-900 px-5 py-3 text-sm font-medium text-white hover:bg-stone-700"
+              <PendingButton
+                pendingLabel="Placing your order…"
+                className="w-full"
               >
                 Place order — {PRODUCT.currency} {PRODUCT.price.toLocaleString()} / bag
-              </button>
+              </PendingButton>
+              <p className="text-xs text-stone-500">
+                Takes a few seconds — we create the order and send the receipt
+                before showing your tracker. One click is enough.
+              </p>
             </form>
           </section>
         </div>

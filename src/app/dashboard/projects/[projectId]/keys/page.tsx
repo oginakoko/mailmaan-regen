@@ -15,7 +15,7 @@ const SCOPE_HELP: Record<string, string> = {
   read: "Read project, templates and messages.",
   send: "Send email (implies read).",
   events: "Ingest app events (implies read).",
-  templates: "Generate AI template drafts (implies read).",
+  templates: "Generate AI template drafts (does not imply read).",
 };
 
 async function createKeyAction(formData: FormData) {

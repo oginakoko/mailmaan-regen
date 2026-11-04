@@ -30,14 +30,16 @@ Base URL: `https://mailmaan-regen.vercel.app`. Dashboard: same host,
    `{"firstName": {"path": "data.firstName"}}` or
    `{"product": {"const": "Soko"}}`), enable it.
 5. API keys → create a key with `events` scope (`send` for direct
-   sends, `templates` for agent generation, `read` is implied).
+   sends, `templates` for agent generation). `send` and `events`
+   imply `read`; a `templates`-only key cannot read — add `read`
+   when the agent also lists or inspects.
 
 **Code (per user action):**
 
 ```ts
 import { MailmaanClient } from "mailmaan-sdk";
 
-const mailmaan = new MailmaanClient({ apiKey: process.env.MAILMAAN_API_KEY });
+const mailmaan = new MailmaanClient({ apiKey: process.env.MAILMAAN_API_KEY! });
 
 // On signup — stable external id makes retries safe (replays, never dupes).
 await mailmaan.trackEvent({
@@ -81,8 +83,11 @@ emails for real.
   is strict both ways: missing variables fail, unknown variables fail.
 - Put the recipient address in `data` and point the workflow's
   `recipient_path` at it.
-- Always pass a stable `id` (your user/order id). Same id + same body
-  replays the same event; same id + different body is rejected.
+- Always pass a stable `id` (your user/order id). Replaying an
+  `id` returns the first record (`replayed: true`) and ignores the
+  new body — it is never rejected, so keep ids unique per action.
+  (Sends are stricter: same key + different body → 422
+  `idempotency_key_reused`.)
 - Keep event names dotted and past-tense: `user.signed_up`,
   `order.paid`, `password.reset_requested`.
 

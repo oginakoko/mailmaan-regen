@@ -41,7 +41,8 @@ from the repo root):
 ```
 
 The key needs `read` for checks/lists/reads/diagnosis, plus `send` for
-test emails and `events` for event tracking. Keep it server-side.
+test emails, `events` for event tracking, and `templates` for draft
+generation (`templates` alone cannot read). Keep it server-side.
 
 ## Machine proof
 

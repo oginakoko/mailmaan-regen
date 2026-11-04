@@ -22,7 +22,7 @@ idempotently: retrying a checkout never double-sends.
 
 ```bash
 # 1. Build the SDK once
-cd ../../packages/sdk && npx tsup src/index.ts --format esm --dts --clean && cd -
+cd ../../packages/sdk && npm run build && cd -
 
 # 2. Install the example (links the local SDK)
 cd examples/soko-store && npm install

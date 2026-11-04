@@ -10,6 +10,7 @@ import {
   type DemoStage,
 } from "@/lib/demo/soko";
 import Tracker from "./tracker";
+import { PendingButton } from "../../pending-button";
 
 const AI_VARIABLES = ["firstName", "orderId"] as const;
 const DEFAULT_BRIEF =
@@ -182,12 +183,9 @@ async function TrackOrderContent({
                     className="w-full rounded-md border border-stone-300 px-3 py-2"
                   />
                 </label>
-                <button
-                  type="submit"
-                  className="rounded-md bg-[#1a7f37] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#156b2f]"
-                >
+                <PendingButton tone="green" pendingLabel="Asking the AI — up to a minute…">
                   Generate thank-you email
-                </button>
+                </PendingButton>
               </form>
               {draft ? (
                 <div className="rounded-lg bg-stone-100 p-4 text-sm">
@@ -200,12 +198,9 @@ async function TrackOrderContent({
                   <form action={sendAiAction} className="mt-3">
                     <input type="hidden" name="orderId" value={order.id} />
                     <input type="hidden" name="draftId" value={draft.id} />
-                    <button
-                      type="submit"
-                      className="rounded-md bg-stone-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-stone-700"
-                    >
+                    <PendingButton pendingLabel="Publishing & sending…">
                       Publish &amp; send this email
-                    </button>
+                    </PendingButton>
                   </form>
                 </div>
               ) : null}
